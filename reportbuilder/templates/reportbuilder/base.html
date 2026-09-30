@@ -1,0 +1,9 @@
+{% load static %}<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{% block title %}WebReportingBuilder{% endblock %}</title>
+<link rel="stylesheet" href="{% static 'reportbuilder/app.css' %}">{% block head %}{% endblock %}</head>
+<body><div class="app-shell">
+{% if user.is_authenticated %}<aside class="sidebar"><a class="brand" href="/">◧ <span>WebReporting<br><small>Builder</small></span></a>
+<div class="muted sidebar-caption">WORKSPACE</div><nav class="sidebar-nav"><a href="/" {% if request.path == '/' %}class="active"{% endif %}>대시보드</a><a href="/reports/" {% if '/reports/' in request.path %}class="active"{% endif %}>보고서 라이브러리</a><a href="/connections/" {% if '/connections/' in request.path %}class="active"{% endif %}>데이터 연결</a><a href="/manual/" {% if request.path == '/manual/' %}class="active"{% endif %}>사용 가이드</a>{% if user.is_staff %}<a href="/admin/">관리 설정</a>{% endif %}</nav><div class="sidebar-footer"><span class="badge">0.1 Alpha</span><p class="muted">나만의 데이터,<br>자유로운 보고서.</p></div></aside>{% endif %}
+<div class="main-area"><header class="topbar"><span class="muted">독립형 오픈소스 리포팅 스튜디오</span>{% if user.is_authenticated %}<div class="user-menu"><span>{{ user.get_username }}</span><form action="{% url 'logout' %}" method="post">{% csrf_token %}<button class="button button-secondary">로그아웃</button></form></div>{% endif %}</header>
+<main class="content">{% for message in messages %}<div class="alert">{{ message }}</div>{% endfor %}{% block content %}{% endblock %}</main></div></div>
+<script src="{% static 'reportbuilder/common.js' %}"></script>{% block scripts %}{% endblock %}</body></html>

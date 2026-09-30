@@ -1,0 +1,14 @@
+services:
+  web:
+    build: .
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      DJANGO_DEBUG: "true"
+      DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1"
+      WEBREPORT_BASE_DIR: /data
+    volumes:
+      - report_data:/data
+    restart: unless-stopped
+volumes:
+  report_data:
