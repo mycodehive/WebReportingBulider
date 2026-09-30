@@ -15,7 +15,7 @@
 | REST/JSON | 고정 HTTPS, records_path | HTTP/IP/allowlist/redirect 보안 테스트, 실제 공급자 미검증 |
 | 자유배치/반복 페이지 | DOM 디자이너/Python 페이지 엔진 | DOM·정의·서버 HTML 통합 |
 | HTML/XLSX/CSV | 동일 실행 snapshot 내보내기 | 실제 파일/셀/권한 시험 |
-| PDF | Playwright 공통 HTML 출력 | Chromium 다운로드 실패로 실제 PDF 검증 보류 |
+| PDF | Playwright 공통 HTML 출력 | GitHub CI에서 실제 PDF 페이지 수·mm 크기·텍스트 검증 통과; 시각 검증은 미완료 |
 | `.wrpx` 이식 | 정의/자산/계약 import/export | 악성 ZIP/변조/매핑 누락/재연결 시험 |
 | 게시/그룹/행/마스킹 | 서버 통제 | Django 통합 보안 테스트 |
 | iframe/Bearer | origin/nonce/scope/expiry | Django 통합 시험, 실제 외부 브라우저 미검증 |
