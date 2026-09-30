@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "WRPX Project 1.0.0",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "format": {
+      "const": "wrpx"
+    },
+    "format_version": {
+      "const": "1.0.0"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "reports": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "path": {
+            "type": "string",
+            "pattern": "^reports/report_[1-9][0-9]*\\.json$"
+          }
+        },
+        "required": [
+          "name",
+          "path"
+        ]
+      },
+      "maxItems": 100,
+      "minItems": 1
+    },
+    "assets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "asset_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "path": {
+            "type": "string",
+            "pattern": "^assets/[a-f0-9-]+\\.(png|jpg|gif|webp)$"
+          },
+          "filename": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "mime": {
+            "enum": [
+              "image/png",
+              "image/jpeg",
+              "image/gif",
+              "image/webp"
+            ]
+          }
+        },
+        "required": [
+          "asset_id",
+          "path",
+          "filename",
+          "mime"
+        ]
+      },
+      "maxItems": 100
+    }
+  },
+  "required": [
+    "format",
+    "format_version",
+    "name",
+    "reports",
+    "assets"
+  ]
+}
