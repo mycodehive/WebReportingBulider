@@ -7,7 +7,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from reportbuilder.definition import validate_definition
-from reportbuilder.models import Connection, Project, Report, Revision
+from reportbuilder.models import Connection, Project, Publication, Report, Revision
 
 
 def demo_definition():
@@ -98,32 +98,47 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f"예제 준비 완료: /reports/{report.pk}/design/"))
 
 
+def binding_connection_ids(bindings):
+    if not isinstance(bindings, list):
+        return set()
+    return {str(binding["connection_id"]) for binding in bindings
+            if isinstance(binding, dict) and binding.get("connection_id")}
+
+
 def reset_demo(user):
     """Delete only this user's named demo reports and unshared source files."""
     reports = list(Report.objects.select_for_update().filter(owner=user, name="매출 현황 예제"))
     report_ids = [report.pk for report in reports]
     connection_ids = set()
     for report in reports:
-        for binding in report.bindings if isinstance(report.bindings, list) else []:
-            if isinstance(binding, dict) and binding.get("connection_id"):
-                connection_ids.add(str(binding["connection_id"]))
+        connection_ids.update(binding_connection_ids(report.bindings))
+        for revision in report.revisions.only("bindings"):
+            connection_ids.update(binding_connection_ids(revision.bindings))
+
+    # Publications protect revisions, so remove publication rows before deleting the demo reports.
+    Publication.objects.filter(report__in=reports).delete()
+
     for report in reports:
         project_id = report.project_id
-        report.delete()  # revisions, publications and execution snapshots cascade with the report
+        report.delete()  # revisions and execution snapshots cascade with the report
         project = Project.objects.filter(pk=project_id, owner=user, name="매출 현황 예제").first()
         if project and not project.reports.exists() and not project.asset_set.exists():
             project.delete()
+
     referenced = set()
     for report in Report.objects.only("bindings").iterator():
-        bindings = report.bindings if isinstance(report.bindings, list) else []
-        referenced.update(str(binding["connection_id"]) for binding in bindings
-                          if isinstance(binding, dict) and binding.get("connection_id"))
+        referenced.update(binding_connection_ids(report.bindings))
+    for revision in Revision.objects.only("bindings").iterator():
+        referenced.update(binding_connection_ids(revision.bindings))
+
     removed_connections = 0
     for connection in Connection.objects.filter(pk__in=connection_ids, owner=user,
                                                  name="합성 매출 CSV", kind="csv"):
         if str(connection.pk) not in referenced:
             if connection.upload:
-                connection.upload.delete(save=False)
+                upload_name = connection.upload.name
+                storage = connection.upload.storage
+                transaction.on_commit(lambda storage=storage, upload_name=upload_name: storage.delete(upload_name))
             connection.delete()
             removed_connections += 1
     return len(report_ids), removed_connections
