@@ -55,10 +55,11 @@ def demo_definition():
 
 
 class Command(BaseCommand):
-    help = "기존 관리자에게 합성 CSV와 페이지 보고서 예제를 추가합니다. 계정/비밀번호를 만들지 않습니다."
+    help = "관리자에게 합성 예제를 추가합니다. --reset은 해당 예제 보고서만 초기화합니다."
 
     def add_arguments(self, parser):
         parser.add_argument("--username")
+        parser.add_argument("--reset", action="store_true", help="기존 매출 예제만 정리하고 다시 생성")
 
     @transaction.atomic
     def handle(self, *args, **options):
@@ -68,8 +69,12 @@ class Command(BaseCommand):
         user = users.first()
         if not user:
             raise CommandError("먼저 createsuperuser로 관리자 계정을 생성하세요.")
-        if Report.objects.filter(owner=user, name="매출 현황 예제").exists():
-            self.stdout.write("예제가 이미 존재합니다.")
+        existing = Report.objects.filter(owner=user, name="매출 현황 예제")
+        if options["reset"]:
+            removed_reports, removed_connections = reset_demo(user)
+            self.stdout.write(f"기존 예제 초기화: 보고서 {removed_reports}개, 미사용 예제 연결 {removed_connections}개 정리")
+        elif existing.exists():
+            self.stdout.write("예제가 이미 존재합니다. 다시 만들려면 --reset 옵션을 사용하세요.")
             return
         text = io.StringIO()
         writer = csv.writer(text)
@@ -91,3 +96,34 @@ class Command(BaseCommand):
                                        bindings=[binding], revision=1)
         Revision.objects.create(report=report, number=1, definition=definition, bindings=[binding])
         self.stdout.write(self.style.SUCCESS(f"예제 준비 완료: /reports/{report.pk}/design/"))
+
+
+def reset_demo(user):
+    """Delete only this user's named demo reports and unshared source files."""
+    reports = list(Report.objects.select_for_update().filter(owner=user, name="매출 현황 예제"))
+    report_ids = [report.pk for report in reports]
+    connection_ids = set()
+    for report in reports:
+        for binding in report.bindings if isinstance(report.bindings, list) else []:
+            if isinstance(binding, dict) and binding.get("connection_id"):
+                connection_ids.add(str(binding["connection_id"]))
+    for report in reports:
+        project_id = report.project_id
+        report.delete()  # revisions, publications and execution snapshots cascade with the report
+        project = Project.objects.filter(pk=project_id, owner=user, name="매출 현황 예제").first()
+        if project and not project.reports.exists() and not project.asset_set.exists():
+            project.delete()
+    referenced = set()
+    for report in Report.objects.only("bindings").iterator():
+        bindings = report.bindings if isinstance(report.bindings, list) else []
+        referenced.update(str(binding["connection_id"]) for binding in bindings
+                          if isinstance(binding, dict) and binding.get("connection_id"))
+    removed_connections = 0
+    for connection in Connection.objects.filter(pk__in=connection_ids, owner=user,
+                                                 name="합성 매출 CSV", kind="csv"):
+        if str(connection.pk) not in referenced:
+            if connection.upload:
+                connection.upload.delete(save=False)
+            connection.delete()
+            removed_connections += 1
+    return len(report_ids), removed_connections
