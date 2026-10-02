@@ -1,10 +1,14 @@
 from django.urls import path
-from . import views, sharing
+from . import views, google_oauth, sharing
 from . import analytics_views
 
 urlpatterns = [
     path("reports/<uuid:report_id>/shares/", sharing.shares, name="report_shares"),
     path("shared/<str:token>/", sharing.public_report, name="public_report"),
+    path("connections/google/oauth/", google_oauth.setup, name="google_oauth_setup"),
+    path("connections/google/callback/", google_oauth.callback, name="google_oauth_callback"),
+    path("connections/<uuid:connection_id>/google/start/", google_oauth.start, name="google_oauth_start"),
+    path("connections/<uuid:connection_id>/google/disconnect/", google_oauth.disconnect, name="google_oauth_disconnect"),
     path("", views.dashboard, name="dashboard"),
     path("reports/", views.library, name="library"),
     path("reports/demo/", views.ensure_demo, name="ensure_demo"),
