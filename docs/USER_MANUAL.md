@@ -199,3 +199,7 @@ uv run python manage.py seed_demo --reset
 라이브러리 카드의 **통계** 버튼은 소유자와 관리자에게 제공됩니다. 팝업에서 기간·접속 유형·국가·기기·브라우저 조건과 일별 추이를 확인하고 Excel/PDF로 내려받으세요. 접속 수는 화면 열기·게시본 실행·임베드 실행 이벤트 수이며 고유 방문자 수가 아닙니다.
 
 국가 정보는 서버에 GeoIP 국가 DB를 설정해야 합니다. 로컬 접속은 Private, DB 미설정은 Unknown으로 기록됩니다. 원본 IP/User-Agent는 통계 DB에 보관하지 않습니다. PDF는 Chromium 설치가 필요합니다. 상세 설치·기록 기준은 저장소의 `docs/WORKSPACE_AND_ANALYTICS.md`를 참고하세요.
+
+
+### Demo 자동 준비
+관리자로 보고서 라이브러리에 처음 접속하면 예제가 없는 경우 “Demo 보고서 생성중” 안내와 함께 합성 매출 데모를 한 번 생성합니다. 기존 예제는 유지하며, 자동 생성 완료 후에는 이름을 바꾸거나 삭제해도 자동으로 다시 만들지 않습니다. 실패 시 다시 시도 버튼을 누르세요. 수동 초기화는 `uv run python manage.py seed_demo --reset`을 사용합니다. 업데이트 시 `uv run python manage.py migrate`가 필요합니다.

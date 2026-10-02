@@ -5,6 +5,7 @@ from . import analytics_views
 urlpatterns = [
     path("", views.dashboard, name="dashboard"),
     path("reports/", views.library, name="library"),
+    path("reports/demo/", views.ensure_demo, name="ensure_demo"),
     path("reports/<uuid:report_id>/design/", views.designer, name="designer"),
     path("reports/<uuid:report_id>/", views.viewer, name="viewer"),
     path("reports/<uuid:report_id>/statistics/", analytics_views.statistics_view, name="statistics"),
