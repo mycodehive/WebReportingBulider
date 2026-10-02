@@ -80,3 +80,5 @@ npm test
 PDF 테스트는 Chromium이 설치된 환경에서 실행됩니다. 설치되지 않은 경우 해당 테스트를 skip합니다. CI는 Chromium 설치 실패를 숨기지 않습니다. 2026-09-30 CI에서는 PDF를 포함한 Python 테스트 101개와 DOM 통합 테스트가 통과했습니다. [검증 기록](docs/VALIDATION.md)을 확인하세요.
 
 자체 코드는 [Apache-2.0](LICENSE)로 배포합니다. 외부 DB 드라이버·브라우저·폰트의 라이선스는 별도이며 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)를 확인하세요. 사용자의 보고서/데이터 권리는 자동으로 프로젝트 코드 라이선스로 변경되지 않습니다.
+
+Google Sheets 공개 링크 및 비공개 OAuth 설정: [설치·연결 가이드](docs/GOOGLE_SHEETS.md).
