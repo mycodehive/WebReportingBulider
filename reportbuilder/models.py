@@ -167,3 +167,15 @@ class ReportAccess(models.Model):
 class DemoSeed(models.Model):
     owner = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     completed = models.BooleanField(default=False)
+
+
+class PublicShare(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    report = models.ForeignKey(Report, on_delete=models.CASCADE, related_name='public_shares')
+    revision = models.ForeignKey(Revision, on_delete=models.CASCADE)
+    token_hash = models.CharField(max_length=64, unique=True)
+    starts_at = models.DateTimeField(null=True, blank=True)
+    ends_at = models.DateTimeField(null=True, blank=True)
+    parameters = models.JSONField(default=dict)
+    revoked = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
