@@ -37,6 +37,7 @@ Linux에서는 Chromium 시스템 의존성과 한글 폰트도 설치해야 합
 | [설치 가이드](docs/INSTALL.md) | uv·PDF·선택 DB 드라이버·운영 설정·Docker |
 | [쉬운 기술명세](docs/TECHNICAL_SPEC.md) | 현재 구현 구조·API·데이터 계약·지원 조건 |
 | [타서비스 연동](docs/INTEGRATION.md) | 프로젝트 가져오기, Django 통합, API·iframe |
+| [작업 화면·접속 통계](docs/WORKSPACE_AND_ANALYTICS.md) | 전체화면·메뉴 접기·테마·통계 팝업·국가 설정·내보내기 |
 | [지원 현황](docs/SUPPORT_MATRIX.md) | 구현·테스트 완료와 미검증/후속 범위 구별 |
 | [개발 가이드](CUSTOM.md) | 파일 위치·수정 방법·검증 명령 |
 | [원래 목표 명세](docs/PLANNED_SPEC_v1.0.md) | 독립형 제품의 전체 목표. 현재 구현 완료 목록과 구별 |

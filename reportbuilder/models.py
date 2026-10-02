@@ -5,6 +5,7 @@ from cryptography.fernet import Fernet
 from django.conf import settings
 from django.contrib.auth.models import Group
 from django.db import models
+from django.utils import timezone
 
 
 def upload_path(instance, filename):
@@ -138,3 +139,26 @@ class ApiToken(models.Model):
 class EmbedNonce(models.Model):
     nonce = models.CharField(max_length=64, primary_key=True)
     expires_at = models.DateTimeField()
+
+
+class ReportAccess(models.Model):
+    """Anonymous event dimensions only: never retain IP, UA, user, or referrer."""
+    EVENTS = [("view", "View"), ("execute", "Execute"), ("embed", "Embed")]
+    DEVICES = [(x, x) for x in ("desktop", "mobile", "tablet", "bot", "unknown")]
+    BROWSERS = [(x, x) for x in ("chrome", "edge", "firefox", "safari", "opera", "other", "unknown")]
+    SYSTEMS = [(x, x) for x in ("windows", "macos", "linux", "android", "ios", "chromeos", "other", "unknown")]
+    report = models.ForeignKey(Report, on_delete=models.CASCADE, related_name="access_events")
+    created_at = models.DateTimeField(default=timezone.now)
+    event = models.CharField(max_length=10, choices=EVENTS)
+    country = models.CharField(max_length=7, default="Unknown")  # ISO alpha-2, Unknown, or Private
+    device = models.CharField(max_length=10, choices=DEVICES, default="unknown")
+    browser = models.CharField(max_length=10, choices=BROWSERS, default="unknown")
+    os = models.CharField(max_length=10, choices=SYSTEMS, default="unknown")
+
+    class Meta:
+        ordering = ["-created_at", "-pk"]
+        indexes = [
+            models.Index(fields=["report", "created_at"], name="access_report_time_idx"),
+            models.Index(fields=["report", "event", "created_at"], name="access_report_event_idx"),
+            models.Index(fields=["created_at"], name="access_retention_idx"),
+        ]

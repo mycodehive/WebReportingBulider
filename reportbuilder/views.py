@@ -26,6 +26,7 @@ from django.views.decorators.clickjacking import xframe_options_exempt
 from openpyxl import Workbook
 from PIL import Image
 
+from .analytics import record_report_access
 from .data import DataError, connector_catalog, introspect, test_connection
 from .definition import DefinitionError, default_definition, validate_definition
 from .models import Asset, Connection, EmbedNonce, Execution, Project, Publication, Report, Revision
@@ -125,7 +126,10 @@ def designer(request, report_id):
 @login_required
 def viewer(request, report_id):
     report = get_object_or_404(reports_for(request.user), pk=report_id)
-    return render_viewer(request, report)
+    response = render_viewer(request, report)
+    if request.method == "GET":
+        record_report_access(request, report, "view")
+    return response
 
 
 def render_viewer(request, report, published=False):
@@ -255,6 +259,7 @@ def publish_api(request, report_id):
 def execute_api(request, report_id):
     report = get_object_or_404(reports_for(request.user), pk=report_id)
     execution, rendered = execute_report(report, request.user, body(request).get("parameters", {}), published=True)
+    record_report_access(request, report, "execute")
     return JsonResponse({"execution_id": str(execution.pk), "html": rendered["html"],
                          "page_count": rendered["page_count"], "row_count": execution.row_count})
 
@@ -519,7 +524,10 @@ def report_export(request, report_id, format):
 def publication_view(request, publication_id):
     publication = get_object_or_404(Publication, pk=publication_id, enabled=True, report__enabled=True)
     report = get_object_or_404(reports_for(request.user), pk=publication.report_id)
-    return render_viewer(request, report, published=True)
+    response = render_viewer(request, report, published=True)
+    if request.method == "GET":
+        record_report_access(request, report, "view")
+    return response
 
 
 @api
@@ -549,7 +557,8 @@ def embed_view(request):
         if payload["origin"] not in settings.EMBED_ALLOWED_ORIGINS or request.headers.get("Origin") != payload["origin"]:
             raise PermissionDenied
         try:
-            EmbedNonce.objects.create(nonce=payload["nonce"], expires_at=timezone.now() + timedelta(minutes=2))
+            with transaction.atomic():
+                EmbedNonce.objects.create(nonce=payload["nonce"], expires_at=timezone.now() + timedelta(minutes=2))
         except IntegrityError:
             raise PermissionDenied
         user = User.objects.get(pk=payload["user_id"], is_active=True)
@@ -557,6 +566,7 @@ def embed_view(request):
         _, rendered = execute_report(report, user, payload.get("parameters", {}), published=True)
     except (signing.BadSignature, PermissionDenied, KeyError, ValueError, User.DoesNotExist, Report.DoesNotExist, DataError, DefinitionError):
         return HttpResponse("임베드 인증에 실패했습니다.", status=403)
+    record_report_access(request, report, "embed")
     response = HttpResponse(rendered["html"])
     response["Content-Security-Policy"] = f"default-src 'none'; img-src data:; style-src 'unsafe-inline'; frame-ancestors {payload['origin']}"
     response["Cache-Control"] = "no-store"

@@ -18,6 +18,9 @@ oracle = ["oracledb>=3"]
 mssql = ["pyodbc>=5"]
 sheets = ["google-auth>=2.38", "requests>=2.32"]
 pdf = ["playwright>=1.51"]
+geoip = [
+    "geoip2>=5,<6",
+]
 
 [dependency-groups]
 dev = [

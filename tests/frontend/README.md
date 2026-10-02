@@ -19,6 +19,12 @@ footer sum, page copy/delete, undo/redo, revision-aware saves, preview sandbox a
 publication parameters. Captured report definitions are then validated by Python,
 bound to a temporary Excel workbook, queried and rendered by the real engines.
 
+Analytics tests render the actual report library template and verify owner-only
+statistics controls, safe text rendering, filtered summaries, charts, recent
+events, downloads using the applied filter snapshot, visible export errors, empty
+and denied responses, range validation, focus restoration and ignored/aborted stale
+requests when filters or the selected report change.
+
 This verifies interactions and contracts. jsdom has no browser layout engine and
 does **not** verify visual appearance, pointer hit-testing, PDF output or physical
 drag coordinates. Those need a separate browser check when Chromium is available.

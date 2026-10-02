@@ -81,3 +81,8 @@ if not DEBUG:
 # Enable only behind a trusted proxy that strips the client-supplied header.
 if os.environ.get("DJANGO_TRUST_PROXY_HEADERS", "false").lower() == "true":
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# Access analytics uses a local GeoIP country database; raw IP/UA are not stored.
+REPORT_ANALYTICS_ENABLED = os.environ.get("REPORT_ANALYTICS_ENABLED", "true").lower() == "true"
+REPORT_GEOIP_DATABASE = os.environ.get("REPORT_GEOIP_DATABASE", "")
+REPORT_TRUSTED_PROXIES = [value.strip() for value in os.environ.get("REPORT_TRUSTED_PROXIES", "").split(",") if value.strip()]

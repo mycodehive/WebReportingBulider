@@ -12,6 +12,7 @@ Python 전체 패키지/버전은 `uv.lock`, 개발용 DOM 테스트 JavaScript 
 | 데이터 | SQLAlchemy, openpyxl, httpx |
 | 보안/이미지 | cryptography, Pillow |
 | 선택 자료원 | psycopg, PyMySQL, python-oracledb, pyodbc, google-auth, requests |
+| 선택 국가 조회 | geoip2, maxminddb 및 전이 의존성. GeoIP 국가 DB는 별도 준비 |
 | PDF | Playwright 및 별도 설치 Chromium/OS 라이브러리 |
 | 개발/시험 | pytest, pytest-django, Ruff, pypdf, jsdom 및 전이 의존성 |
 | OS에서 별도 설치 | MDBTools, Microsoft ODBC Driver, Noto CJK 폰트 등 |
