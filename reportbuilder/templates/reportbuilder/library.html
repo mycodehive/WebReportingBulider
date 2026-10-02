@@ -51,7 +51,7 @@
     </form>
     <p id="share-status" role="status" aria-live="polite"></p>
     <div id="share-result" hidden><label class="field">공유 링크<input class="input" id="share-url" readonly></label><button type="button" class="button button-secondary" id="share-copy">링크 복사</button><p class="muted">이 링크는 생성 직후에만 표시됩니다. 복사해 보관하세요.</p></div>
-    <h3>생성한 공유 링크 (최근 100개)</h3><div id="share-list"></div>
+    <h3>공유 링크 관리</h3><p class="muted">사용 중인 링크는 모두 표시하고, 해제된 링크는 최근 100개까지 표시합니다.</p><div id="share-list"></div>
   </div>
 </dialog>
 {% endblock %}{% block scripts %}<script src="{% static 'reportbuilder/sharing.js' %}" defer></script><script src="{% static 'reportbuilder/library.js' %}" defer></script><script src="{% static 'reportbuilder/statistics.js' %}" defer></script>{% endblock %}
