@@ -313,8 +313,14 @@ def create_connection(user, name, kind, config, upload=None):
 def connections_page(request):
     if request.method == "POST":
         try:
-            create_connection(request.user, request.POST.get("name", "데이터"), request.POST["kind"],
-                              json.loads(request.POST.get("config", "{}")), request.FILES.get("file"))
+            kind = request.POST["kind"]
+            if kind in {"sheets", "google_sheets"} and request.POST.get("sheet_auth_mode"):
+                from .google_oauth import sheet_config
+                config = sheet_config(request.POST)
+            else:
+                config = json.loads(request.POST.get("config", "{}"))
+            create_connection(request.user, request.POST.get("name", "데이터"), kind,
+                              config, request.FILES.get("file"))
             messages.success(request, "데이터 연결을 등록했습니다. 연결 테스트로 확인해 주세요.")
             return redirect("connections")
         except PermissionDenied:

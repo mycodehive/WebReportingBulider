@@ -50,6 +50,9 @@ class Connection(Owned):
             value["path"] = self.upload.path
         if self.kind == "rest":
             value["allowed_hosts"] = settings.REPORT_REST_ALLOWED_HOSTS
+        if self.kind in {'sheets', 'google_sheets'} and value.get('auth_mode') == 'oauth':
+            from .google_oauth import access_token
+            value['access_token'] = access_token(self)
         return value
 
     def __str__(self):
@@ -167,6 +170,19 @@ class ReportAccess(models.Model):
 class DemoSeed(models.Model):
     owner = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     completed = models.BooleanField(default=False)
+
+
+class GoogleOAuthApp(models.Model):
+    owner = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    client_id = models.CharField(max_length=255)
+    encrypted_secret = models.TextField()
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def set_secret(self, value):
+        self.encrypted_secret = Fernet(settings.REPORT_SECRET_KEY.encode()).encrypt(value.encode()).decode()
+
+    def secret(self):
+        return Fernet(settings.REPORT_SECRET_KEY.encode()).decrypt(self.encrypted_secret.encode()).decode()
 
 
 class PublicShare(models.Model):
