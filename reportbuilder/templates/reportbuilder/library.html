@@ -1,5 +1,24 @@
 {% extends 'reportbuilder/base.html' %}{% load static %}{% block head %}<link rel="stylesheet" href="{% static 'reportbuilder/statistics.css' %}">{% endblock %}{% block content %}<div class="page-heading"><div><span class="eyebrow">REPORT LIBRARY</span><h1>보고서 라이브러리</h1><p class="muted">디자인을 만들고, 버전을 저장하고, 프로젝트를 가져오세요.</p></div><button class="button button-primary" data-new-report>＋ 새 보고서</button></div>
-<div class="card toolbar"><form method="get" class="toolbar"><input class="input" name="q" value="{{ request.GET.q }}" placeholder="보고서 이름 검색"><button class="button button-secondary">검색</button></form><form action="{% url 'project_import' %}" method="post" enctype="multipart/form-data" class="toolbar">{% csrf_token %}<input type="file" name="file" accept=".wrpx" required aria-label="가져올 프로젝트"><button class="button button-secondary">프로젝트 가져오기</button></form></div>
+<div class="card library-toolbar">
+  <form method="get" class="library-search" role="search" aria-label="보고서 검색">
+    <label for="report-search" class="library-toolbar-label">보고서 검색</label>
+    <div class="library-search-controls">
+      <input type="search" id="report-search" class="input" name="q" value="{{ request.GET.q }}" placeholder="보고서 이름을 입력하세요">
+      <button type="submit" class="button button-primary">검색</button>
+      {% if request.GET.q %}<a class="button button-secondary" href="{% url 'library' %}">초기화</a>{% endif %}
+    </div>
+    <p class="library-toolbar-help">이름으로 원하는 보고서를 찾아보세요.</p>
+  </form>
+  <form action="{% url 'project_import' %}" method="post" enctype="multipart/form-data" class="library-import">
+    {% csrf_token %}
+    <label for="project-file" class="library-toolbar-label">프로젝트 가져오기</label>
+    <div class="library-import-controls">
+      <input id="project-file" class="library-file" type="file" name="file" accept=".wrpx" required aria-describedby="project-file-help">
+      <button type="submit" class="button button-secondary">가져오기</button>
+    </div>
+    <p id="project-file-help" class="library-toolbar-help">내보낸 .wrpx 파일을 선택해 프로젝트를 추가하세요.</p>
+  </form>
+</div>
 <div class="report-grid">{% for report in reports %}<div class="card report-card"><a class="report-thumbnail" href="{% url 'designer' report.pk %}">◧</a><h3>{{ report.name }}</h3><p class="muted">{{ report.owner }} · 버전 {{ report.revision }}<br>{{ report.updated_at|date:'Y.m.d H:i' }}</p><div class="toolbar"><a class="button button-primary" href="{% url 'designer' report.pk %}">디자인</a><a class="button button-secondary" href="{% url 'viewer' report.pk %}">실행</a><a class="button button-secondary" href="{% url 'report_export' report.pk 'project' %}">내보내기</a>{% if user.is_staff or report.owner_id == user.id %}<button type="button" class="button button-secondary" data-report-statistics="{{ report.pk }}" data-report-name="{{ report.name }}" aria-haspopup="dialog">통계</button>{% endif %}</div></div>{% empty %}<div class="card empty-state"><h2>첫 보고서를 만들어 보세요.</h2><p>uv run python manage.py seed_demo 명령으로 예제도 추가할 수 있습니다.</p></div>{% endfor %}</div>
 <dialog id="statistics-dialog" class="statistics-dialog" aria-labelledby="statistics-title" aria-describedby="statistics-description">
   <div class="statistics-heading"><div><span class="eyebrow">REPORT ANALYTICS</span><h2 id="statistics-title">보고서 이용 통계</h2><p id="statistics-description">조회·실행·임베드 이용 기록을 기간과 접속 환경별로 확인하세요.</p></div><button type="button" id="statistics-close" class="icon-button" aria-label="통계 창 닫기" autofocus>×</button></div>
