@@ -2,20 +2,24 @@
 import hashlib
 import json
 import secrets
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods, require_GET
+from django.db.models import F, Q
 
 from .analytics import record_report_access
 from .analytics_views import owner_session
 from .definition import DefinitionError, validate_parameters
 from .data import DataError
 from .models import PublicShare
-from .services import execute_report
+from .services import render_public_report
 from django.core.exceptions import PermissionDenied
+
+MAX_ACTIVE_SHARES = 100
+PUBLIC_REQUESTS_PER_MINUTE = 30
 
 
 def digest(token):
@@ -54,7 +58,9 @@ def shares(request, report):
     if request.method == 'GET':
         now = timezone.now()
         rows = []
-        for item in report.public_shares.order_by('-created_at')[:100]:
+        active = report.public_shares.filter(revoked=False).order_by('-created_at')
+        revoked = report.public_shares.filter(revoked=True).order_by('-created_at')[:100]
+        for item in list(active) + list(revoked):
             status = '사용 가능'
             if item.revoked:
                 status = '공유 해제'
@@ -68,6 +74,8 @@ def shares(request, report):
         return JsonResponse({'shares': rows, 'parameters': publication.revision.definition.get('parameters', []) if publication else []})
     if not publication or not publication.enabled or not report.enabled or not report.owner.is_active:
         return JsonResponse({'message': '활성 보고서를 먼저 게시하세요.'}, status=400)
+    if report.public_shares.filter(revoked=False).count() >= MAX_ACTIVE_SHARES:
+        return JsonResponse({'message': '활성 공유 링크는 보고서당 최대 100개입니다. 기존 링크를 해제한 뒤 다시 시도하세요.'}, status=429)
     try:
         data = json.loads(request.body)
         starts_at, ends_at = parse_time(data.get('starts_at')), parse_time(data.get('ends_at'))
@@ -94,8 +102,22 @@ def public_report(request, token):
             or not share.report.owner.is_active or publication.revision_id != share.revision_id
             or share.starts_at and now < share.starts_at or share.ends_at and now >= share.ends_at):
         return secured(HttpResponse('<!doctype html><html lang="ko"><meta charset="utf-8"><title>공유 보고서</title><body><h1>이 공유 링크로 보고서를 열 수 없습니다.</h1><p>열람 기간이 아니거나 공유가 해제되었습니다. 공유한 사람에게 문의하세요.</p></body></html>', status=404))
+    cutoff = now - timedelta(minutes=1)
+    reset = PublicShare.objects.filter(pk=share.pk).filter(
+        Q(public_window_started__isnull=True) | Q(public_window_started__lt=cutoff)
+    ).update(public_window_started=now, public_window_count=1)
+    if not reset:
+        allowed = PublicShare.objects.filter(
+            pk=share.pk, public_window_started__gte=cutoff,
+            public_window_count__lt=PUBLIC_REQUESTS_PER_MINUTE,
+        ).update(public_window_count=F('public_window_count') + 1)
+        if not allowed:
+            response = secured(HttpResponse('요청이 너무 많습니다. 잠시 후 다시 시도하세요.', status=429))
+            response['Retry-After'] = '60'
+            return response
     try:
-        _, rendered = execute_report(share.report, share.report.owner, share.parameters, published=True)
+        rendered = render_public_report(share.report, share.report.owner, share.revision.definition,
+                                        share.revision.bindings, share.parameters)
     except (PermissionDenied, DefinitionError, DataError):
         return secured(HttpResponse('보고서를 표시할 수 없습니다. 공유한 사람에게 문의하세요.', status=503))
     # Rendering can take time: expiry/revocation/publication changes must still apply.
