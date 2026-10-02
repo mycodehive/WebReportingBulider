@@ -1,5 +1,6 @@
 """Real browser integration; CI installs Chromium and uploads synthetic screenshots."""
 from pathlib import Path
+import io
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -70,7 +71,7 @@ def test_workspace_theme_fullscreen_and_statistics_downloads(live_server, client
             with page.expect_download() as downloaded:
                 page.locator('[data-statistics-export="xlsx"]').click()
             from openpyxl import load_workbook
-            workbook = load_workbook(downloaded.value.path())
+            workbook = load_workbook(io.BytesIO(Path(downloaded.value.path()).read_bytes()))
             assert len(workbook.sheetnames) >= 4
             with page.expect_download(timeout=60000) as downloaded:
                 page.locator('[data-statistics-export="pdf"]').click()
