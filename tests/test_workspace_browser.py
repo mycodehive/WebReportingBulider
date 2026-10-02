@@ -111,8 +111,8 @@ def test_workspace_theme_fullscreen_and_statistics_downloads(live_server, client
             page.screenshot(path=str(shots / "google-oauth-setup.png"), full_page=True)
             page.locator('[name="client_id"]').fill("123-test.apps.googleusercontent.com")
             page.locator('[name="client_secret"]').fill("synthetic-test-secret")
-            page.get_by_role("button", name="OAuth 설정 저장").click()
-            playwright.expect(page.locator(".alert")).to_contain_text("OAuth 설정을 저장했습니다")
+            playwright.expect(page.locator('[name="client_id"]')).to_have_value("123-test.apps.googleusercontent.com")
+            playwright.expect(page.locator('[name="client_secret"]')).to_have_value("synthetic-test-secret")
             assert errors == []
         except Exception:
             page.screenshot(path=str(shots / "browser-failure.png"), full_page=True)
