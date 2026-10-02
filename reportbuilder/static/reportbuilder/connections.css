@@ -1,0 +1,41 @@
+/* Keep connection actions readable in both workspace themes. */
+.connections-page .card + .card{margin-top:24px}
+.connections-page .button{min-height:40px;font-size:13px}
+.connections-page .button:focus-visible{outline:3px solid var(--focus-ring);outline-offset:3px}
+.connections-table td{vertical-align:top;overflow-wrap:anywhere}
+.connection-actions{display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px}
+.connection-actions>form{margin:0;display:inline-flex}
+.connection-actions .connection-delete-form{margin-left:auto}
+.connection-actions .connection-delete-form button{margin-top:0}
+.connection-actions .connection-edit{margin:0}
+.connection-actions .connection-edit[open]{flex-basis:100%;order:1;min-width:0}
+.connection-actions .connection-edit[open]>summary{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.connection-actions .connection-edit-form{min-width:0;width:100%;max-width:600px;max-height:none;overflow:visible;box-shadow:none;background:var(--surface-subtle)}
+.connection-feedback{margin:8px 0 0;font-size:12px;max-width:600px;overflow-wrap:anywhere}
+.connection-feedback:empty{display:none}
+.connection-feedback[data-state=success]{color:var(--success)}
+.connection-feedback[data-state=error]{color:var(--danger)}
+.connections-page [data-status]{white-space:nowrap}
+.connections-page [data-status][data-state=success]{background:var(--success-soft);color:var(--success)}
+.connections-page [data-status][data-state=error]{background:var(--danger-soft);color:var(--danger)}
+.connection-form-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.connections-page .button[aria-busy=true]{cursor:wait}
+@media(max-width:760px){
+ :root .app-shell:has(.connections-page){display:block}
+ .app-shell:has(.connections-page) .sidebar{position:static;height:auto;padding:8px;border-right:0;border-bottom:1px solid var(--border)}
+ .app-shell:has(.connections-page) .brand,.app-shell:has(.connections-page) .sidebar-caption,.app-shell:has(.connections-page) .sidebar-footer,.app-shell:has(.connections-page) .nav-label{display:none}
+ .app-shell:has(.connections-page) .sidebar-nav{flex-direction:row;justify-content:space-around}
+ .app-shell:has(.connections-page) .sidebar-nav a{padding:10px;justify-content:center;min-width:44px}
+ .app-shell:has(.connections-page) #sidebar-toggle{display:none}
+ .app-shell:has(.connections-page) .content{padding:20px 12px}
+ .connections-page .card{padding:16px}
+ .connections-table thead{display:none}
+ .connections-table,.connections-table tbody,.connections-table tr,.connections-table td{display:block;width:100%}
+ .connections-table tr{padding:12px 0;border-bottom:1px solid var(--border)}
+ .connections-table tr:last-child{border-bottom:0}
+ .connections-table td{padding:6px 0;border:0}
+ .connections-table td[data-label]::before{content:attr(data-label);display:block;margin-bottom:4px;font-size:11px;color:var(--muted)}
+ .connection-actions .connection-delete-form{margin-left:0}
+ .connection-actions .connection-edit-form{padding:12px}
+ .connection-create-form .form-grid{grid-template-columns:1fr}
+}

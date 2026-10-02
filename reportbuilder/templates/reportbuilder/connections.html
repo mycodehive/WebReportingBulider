@@ -1,22 +1,25 @@
 {% extends 'reportbuilder/base.html' %}
 {% load static %}
+{% block head %}<link rel="stylesheet" href="{% static 'reportbuilder/connections.css' %}">{% endblock %}
 {% block content %}
+<div class="connections-page">
 <div class="page-heading">
   <div><span class="eyebrow">DATA CONNECTIONS</span><h1>데이터 연결</h1><p class="muted">연결 정보는 서버에 저장하고, 보고서 프로젝트에는 포함하지 않습니다.</p></div>
 </div>
 
 <div class="card">
   <h2>등록한 연결</h2>
-  <table class="table">
+  <table class="table connections-table">
     <thead><tr><th>이름</th><th>자료원</th><th>상태</th><th>관리</th></tr></thead>
     <tbody>
       {% for connection in connections %}
       <tr>
-        <td>{{ connection.name }}</td>
-        <td>{{ connection.kind }}</td>
-        <td><span class="badge" data-status="{{ connection.pk }}">{{ connection.status }}</span></td>
-        <td>
-          <button class="button button-secondary" type="button" data-test-connection="{{ connection.pk }}">연결 테스트</button>
+        <td data-label="이름">{{ connection.name }}</td>
+        <td data-label="자료원">{{ connection.kind }}</td>
+        <td data-label="상태"><span class="badge" data-status="{{ connection.pk }}">{% if connection.status == 'CONNECTED' %}연결 확인됨{% elif connection.status == 'UNTESTED' %}테스트 필요{% else %}{{ connection.status }}{% endif %}</span></td>
+        <td data-label="관리">
+          <div class="connection-actions">
+          <button class="button button-secondary" type="button" data-test-connection="{{ connection.pk }}" data-connection-name="{{ connection.name }}" aria-describedby="connection-result-{{ connection.pk }}">연결 테스트</button>
           {% if user.is_staff and connection.owner_id == user.id %}
             {% if connection.config.auth_mode == 'oauth' %}
               <form method="post" action="{% url 'google_oauth_start' connection.pk %}" style="display:inline">{% csrf_token %}<button class="button button-secondary">Google 인증 / 재인증</button></form>
@@ -33,27 +36,28 @@
                 <p class="muted">입력한 항목만 갱신합니다. 비우면 기존 값을 유지합니다. 기존 비밀 정보를 모두 지우려면 아래를 선택하세요.</p>
                 <label class="field"><span><input type="checkbox" name="clear_secrets" value="yes"> 저장된 비밀 정보 모두 지우기</span></label>
                 {% if connection.file_extensions %}<label class="field">파일 교체 (선택)<input class="input" type="file" name="file" accept="{{ connection.file_extensions|join:',' }}"><small class="muted">현재 파일은 선택하지 않으면 유지됩니다.</small></label>{% endif %}
-                <button class="button button-primary" type="submit">변경 저장</button>
+                <div class="connection-form-actions"><button class="button button-primary" type="submit">변경 저장</button><button class="button button-secondary" type="button" data-cancel-edit>취소</button></div>
               </form>
             </details>
             <form method="post" action="{% url 'connection_delete' connection.pk %}" class="connection-delete-form" style="display:inline">
               {% csrf_token %}<button class="button button-danger" type="submit" data-connection-delete="{{ connection.name }}" data-connection-delete-id="{{ connection.pk }}">삭제</button>
             </form>
           {% endif %}
+          </div>
+          <p id="connection-result-{{ connection.pk }}" class="connection-feedback muted" role="status" aria-live="polite" aria-atomic="true"></p>
         </td>
       </tr>
       {% empty %}
-      <tr><td colspan="4" class="empty-state">아래에서 Excel 파일 또는 데이터베이스를 등록하세요.</td></tr>
+      <tr><td colspan="4" class="empty-state">{% if user.is_staff %}아래에서 Excel 파일 또는 데이터베이스를 등록하세요.{% else %}등록된 연결이 없습니다. 관리자에게 데이터 연결 등록을 요청하세요.{% endif %}</td></tr>
       {% endfor %}
     </tbody>
   </table>
-  <div id="connection-result" class="muted" role="status"></div>
 </div>
 
 {% if user.is_staff %}
 <div class="card">
   <h2>새 연결 등록</h2>
-  <form method="post" enctype="multipart/form-data">
+  <form method="post" enctype="multipart/form-data" class="connection-create-form">
     {% csrf_token %}
     <div class="form-grid">
       <div class="field"><label>연결 이름</label><input class="input" name="name" required placeholder="매출 자료"></div>
@@ -72,10 +76,11 @@
       <p class="muted">비공개 연결은 등록 후 위 목록에서 Google 인증을 진행하세요.</p>
     </div>
     <div class="field" id="connection-json"><label>추가 연결 설정</label><textarea class="input" name="config" id="connection-config" rows="6">{}</textarea><small class="muted" id="connection-help">Excel은 파일만 선택해도 시작할 수 있습니다. 예: {"header_row": 1}</small></div>
-    <button class="button button-primary">연결 등록</button>
+    <div class="connection-form-actions"><button class="button button-primary" type="submit">연결 등록</button><span class="muted">등록 후 연결 테스트로 데이터 접근을 확인하세요.</span></div>
   </form>
   <p class="muted">외부 DB는 선택 드라이버 설치가 필요합니다. Access는 MDBTools가 읽을 수 있는 기본 로컬 테이블만 지원합니다. 상세 설정은 사용 가이드에 있습니다.</p>
 </div>
 {% endif %}
+</div>
 {% endblock %}
 {% block scripts %}<script src="{% static 'reportbuilder/connections.js' %}" defer></script>{% endblock %}
