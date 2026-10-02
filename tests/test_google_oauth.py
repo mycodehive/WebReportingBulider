@@ -93,6 +93,25 @@ def test_setup_hides_secret_and_parses_url(client, setup):
         sheet_config({'sheet_url':'https://evil.test/spreadsheets/d/abcdefghijk/edit'})
 
 
+def test_oauth_setup_post_requires_csrf_and_saves_credentials(setup):
+    owner, _, _ = setup
+    strict = Client(enforce_csrf_checks=True)
+    strict.force_login(owner)
+    strict.get('/connections/google/oauth/')
+    csrf = strict.cookies['csrftoken'].value
+
+    response = strict.post('/connections/google/oauth/', {
+        'client_id': '123-test.apps.googleusercontent.com',
+        'client_secret': 'new-secret',
+    }, HTTP_X_CSRFTOKEN=csrf)
+
+    assert response.status_code == 302
+    configured = GoogleOAuthApp.objects.get(owner=owner)
+    assert configured.client_id == '123-test.apps.googleusercontent.com'
+    assert 'new-secret' not in configured.encrypted_secret
+    assert configured.secret() == 'new-secret'
+
+
 def test_public_sheet_without_authentication():
     config = {'spreadsheet_id':'abcdefghijk','auth_mode':'public','gid':'42'}
     with patch('reportbuilder.data._https_json', return_value='name,amount\nAlice,100\nBob,200\n') as request:
