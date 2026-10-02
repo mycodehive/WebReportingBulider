@@ -6,7 +6,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from reportbuilder.definition import default_definition
-from reportbuilder.models import Project, Report, Revision, Publication, PublicShare
+from reportbuilder.models import AuditEvent, Execution, Project, Report, Revision, Publication, PublicShare
 
 pytestmark = pytest.mark.django_db
 
@@ -76,3 +76,49 @@ def test_permissions_and_invalid_inputs(client, published):
     published.publication.enabled = False
     published.publication.save()
     assert client.post(endpoint, {}, content_type='application/json').status_code == 400
+
+
+def test_public_view_does_not_create_owner_execution_or_audit(client, published):
+    url = create(client, published)
+    client.logout()
+
+    assert client.get(url).status_code == 200
+    assert Execution.objects.filter(report=published).count() == 0
+    assert not AuditEvent.objects.filter(resource_id=str(published.pk), action='execute').exists()
+
+
+def test_public_view_is_rate_limited_before_rendering(client, published, monkeypatch):
+    from reportbuilder import sharing
+
+    url = create(client, published)
+    share = PublicShare.objects.get()
+    share.public_window_started = timezone.now()
+    share.public_window_count = sharing.PUBLIC_REQUESTS_PER_MINUTE
+    share.save(update_fields=['public_window_started', 'public_window_count'])
+    client.logout()
+    monkeypatch.setattr(sharing, 'render_public_report', lambda *args, **kwargs: pytest.fail('render should not run'))
+
+    response = client.get(url)
+    assert response.status_code == 429
+    assert response['Retry-After'] == '60'
+
+
+def test_all_unrevoked_shares_remain_listed_for_revocation(client, published):
+    revision = published.publication.revision
+    for index in range(105):
+        PublicShare.objects.create(report=published, revision=revision,
+                                   token_hash=f'{index:064x}')
+
+    response = client.get(f'/reports/{published.pk}/shares/')
+    assert response.status_code == 200
+    assert len(response.json()['shares']) == 105
+
+
+def test_active_share_creation_has_a_bounded_limit(client, published):
+    revision = published.publication.revision
+    for index in range(100):
+        PublicShare.objects.create(report=published, revision=revision,
+                                   token_hash=f'{index:064x}')
+
+    response = client.post(f'/reports/{published.pk}/shares/', {}, content_type='application/json')
+    assert response.status_code == 429
