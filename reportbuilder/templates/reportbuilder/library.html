@@ -20,7 +20,7 @@
   </form>
 </div>
 {% if demo_pending %}<form id="demo-bootstrap" action="{% url 'ensure_demo' %}" method="post" class="card" style="margin-top:20px">{% csrf_token %}<p role="status" aria-live="polite" data-demo-status>Demo 보고서 생성중</p><button type="submit" class="button button-secondary" hidden data-demo-retry>다시 시도</button><noscript><button class="button button-secondary">Demo 보고서 생성</button></noscript></form>{% endif %}
-<div class="report-grid">{% for report in reports %}<div class="card report-card"><a class="report-thumbnail" href="{% url 'designer' report.pk %}">◧</a><h3>{{ report.name }}</h3><p class="muted">{{ report.owner }} · 버전 {{ report.revision }}<br>{{ report.updated_at|date:'Y.m.d H:i' }}</p><div class="toolbar"><a class="button button-primary" href="{% url 'designer' report.pk %}">디자인</a><a class="button button-secondary" href="{% url 'viewer' report.pk %}">실행</a><a class="button button-secondary" href="{% url 'report_export' report.pk 'project' %}">내보내기</a>{% if user.is_staff or report.owner_id == user.id %}<button type="button" class="button button-secondary" data-report-statistics="{{ report.pk }}" data-report-name="{{ report.name }}" aria-haspopup="dialog">통계</button>{% endif %}</div></div>{% empty %}{% if not demo_pending %}<div class="card empty-state"><h2>{% if request.GET.q %}검색 결과가 없습니다.{% else %}첫 보고서를 만들어 보세요.{% endif %}</h2></div>{% endif %}{% endfor %}</div>
+<div class="report-grid">{% for report in reports %}<div class="card report-card"><a class="report-thumbnail" href="{% url 'designer' report.pk %}">◧</a><h3>{{ report.name }}</h3><p class="muted">{{ report.owner }} · 버전 {{ report.revision }}<br>{{ report.updated_at|date:'Y.m.d H:i' }}</p><div class="toolbar"><a class="button button-primary" href="{% url 'designer' report.pk %}">디자인</a><a class="button button-secondary" href="{% url 'viewer' report.pk %}">실행</a><a class="button button-secondary" href="{% url 'report_export' report.pk 'project' %}">내보내기</a>{% if user.is_staff or report.owner_id == user.id %}{% if report.enabled and report.publication.enabled %}<button type="button" class="button button-secondary" data-share-report="{{ report.pk }}" data-share-name="{{ report.name }}" aria-haspopup="dialog">공유</button>{% endif %}<button type="button" class="button button-secondary" data-report-statistics="{{ report.pk }}" data-report-name="{{ report.name }}" aria-haspopup="dialog">통계</button>{% endif %}</div></div>{% empty %}{% if not demo_pending %}<div class="card empty-state"><h2>{% if request.GET.q %}검색 결과가 없습니다.{% else %}첫 보고서를 만들어 보세요.{% endif %}</h2></div>{% endif %}{% endfor %}</div>
 <dialog id="statistics-dialog" class="statistics-dialog" aria-labelledby="statistics-title" aria-describedby="statistics-description">
   <div class="statistics-heading"><div><span class="eyebrow">REPORT ANALYTICS</span><h2 id="statistics-title">보고서 이용 통계</h2><p id="statistics-description">조회·실행·임베드 이용 기록을 기간과 접속 환경별로 확인하세요.</p></div><button type="button" id="statistics-close" class="icon-button" aria-label="통계 창 닫기" autofocus>×</button></div>
   <div class="statistics-body">
@@ -38,4 +38,20 @@
     </div>
   </div>
 </dialog>
-{% endblock %}{% block scripts %}<script src="{% static 'reportbuilder/library.js' %}" defer></script><script src="{% static 'reportbuilder/statistics.js' %}" defer></script>{% endblock %}
+<dialog id="share-dialog" aria-labelledby="share-title" style="width:min(640px,calc(100% - 32px));max-height:90vh;overflow:auto">
+  <div class="dialog-header"><h2 id="share-title">보고서 공유</h2><button type="button" id="share-close" class="icon-button" aria-label="공유 창 닫기">×</button></div>
+  <div style="padding:24px">
+    <p id="share-name"></p><p class="muted">링크를 가진 누구나 로그인 없이 이 게시본을 볼 수 있습니다. 열 때마다 보고서 소유자의 데이터 권한으로 조회합니다. 새 버전을 게시하면 기존 링크는 중지됩니다.</p>
+    <form id="share-form">
+      <label class="field">열람 기간<select class="input" id="share-period"><option value="forever">기간 제한 없음</option><option value="range">기간 지정 (한국 시간)</option></select></label>
+      <div id="share-dates" class="form-grid" hidden><label class="field">시작 시각 (비우면 즉시)<input class="input" type="datetime-local" id="share-start"></label><label class="field">종료 시각<input class="input" type="datetime-local" id="share-end"></label></div>
+      <div id="share-parameters" class="form-grid"></div>
+      <p class="muted">공유용 입력값은 링크 생성 후 변경되지 않습니다. 기간 제한 없는 링크도 언제든 공유 해제할 수 있습니다.</p>
+      <button type="submit" id="share-create" class="button button-primary">공유 링크 생성</button>
+    </form>
+    <p id="share-status" role="status" aria-live="polite"></p>
+    <div id="share-result" hidden><label class="field">공유 링크<input class="input" id="share-url" readonly></label><button type="button" class="button button-secondary" id="share-copy">링크 복사</button><p class="muted">이 링크는 생성 직후에만 표시됩니다. 복사해 보관하세요.</p></div>
+    <h3>생성한 공유 링크 (최근 100개)</h3><div id="share-list"></div>
+  </div>
+</dialog>
+{% endblock %}{% block scripts %}<script src="{% static 'reportbuilder/sharing.js' %}" defer></script><script src="{% static 'reportbuilder/library.js' %}" defer></script><script src="{% static 'reportbuilder/statistics.js' %}" defer></script>{% endblock %}

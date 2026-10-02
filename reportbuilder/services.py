@@ -203,3 +203,13 @@ def execute_report(report, user, parameters=None, published=False):
         execution.error_code = getattr(exc, "code", "EXECUTION_FAILED")
         execution.save(update_fields=["status", "error_code"])
         raise
+def render_public_report(report, user, definition, bindings, parameters=None):
+    """Render a share without creating execution snapshots or owner audit events."""
+    if not user.is_authenticated or report.owner_id != user.pk or not user.is_active:
+        raise PermissionDenied("공유 보고서 소유자 연결이 유효하지 않습니다.")
+    if not isinstance(parameters, dict):
+        raise DefinitionError("Input parameters must be an object")
+    parameters = validate_parameters(definition, parameters)
+    datasets = run_datasets(report, user, definition, bindings, parameters)
+    return render_report(definition, datasets, parameters,
+                         asset_resolver=lambda asset_id: safe_asset(report, user, asset_id))

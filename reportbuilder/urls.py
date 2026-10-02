@@ -1,8 +1,10 @@
 from django.urls import path
-from . import views
+from . import views, sharing
 from . import analytics_views
 
 urlpatterns = [
+    path("reports/<uuid:report_id>/shares/", sharing.shares, name="report_shares"),
+    path("shared/<str:token>/", sharing.public_report, name="public_report"),
     path("", views.dashboard, name="dashboard"),
     path("reports/", views.library, name="library"),
     path("reports/demo/", views.ensure_demo, name="ensure_demo"),

@@ -17,6 +17,7 @@ def test_workspace_theme_fullscreen_and_statistics_downloads(live_server, client
     call_command("seed_demo", username=user.username, verbosity=0)
     report = Report.objects.get(owner=user, name="매출 현황 예제")
     client.force_login(user)
+    assert client.post(f"/api/reports/{report.pk}/publish/", {}, content_type="application/json").status_code == 200
     ReportAccess.objects.create(report=report, event="view", country="KR", device="mobile", browser="safari", os="ios")
     with playwright.sync_playwright() as api:
         try:
@@ -83,6 +84,21 @@ def test_workspace_theme_fullscreen_and_statistics_downloads(live_server, client
             page.locator(f'[data-report-statistics="{report.pk}"]').click()
             playwright.expect(page.locator('[data-stat-kpi="total"]')).to_contain_text("2")
             page.screenshot(path=str(shots / "statistics-light.png"))
+            page.keyboard.press("Escape")
+            page.locator(f'[data-share-report="{report.pk}"]').click()
+            playwright.expect(page.locator("#share-create")).to_be_enabled()
+            page.locator("#share-create").click()
+            playwright.expect(page.locator("#share-url")).not_to_have_value("")
+            shared_url = page.locator("#share-url").input_value()
+            page.screenshot(path=str(shots / "sharing-light.png"))
+            guest = browser.new_context()
+            visitor = guest.new_page()
+            assert visitor.goto(shared_url).status == 200
+            playwright.expect(visitor.locator("body")).to_contain_text("매출 현황 보고서")
+            page.locator("#share-list button").first.click()
+            playwright.expect(page.locator("#share-list")).to_contain_text("공유 해제")
+            assert visitor.reload().status == 404
+            guest.close()
             assert errors == []
         except Exception:
             page.screenshot(path=str(shots / "browser-failure.png"), full_page=True)
