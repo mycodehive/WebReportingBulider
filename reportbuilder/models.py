@@ -162,3 +162,8 @@ class ReportAccess(models.Model):
             models.Index(fields=["report", "event", "created_at"], name="access_report_event_idx"),
             models.Index(fields=["created_at"], name="access_retention_idx"),
         ]
+
+
+class DemoSeed(models.Model):
+    owner = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    completed = models.BooleanField(default=False)

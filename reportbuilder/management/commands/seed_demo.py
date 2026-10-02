@@ -7,7 +7,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from reportbuilder.definition import validate_definition
-from reportbuilder.models import Connection, Project, Publication, Report, Revision
+from reportbuilder.models import Connection, DemoSeed, Project, Publication, Report, Revision
 
 
 def demo_definition():
@@ -69,11 +69,15 @@ class Command(BaseCommand):
         user = users.first()
         if not user:
             raise CommandError("먼저 createsuperuser로 관리자 계정을 생성하세요.")
+        marker, _ = DemoSeed.objects.get_or_create(owner=user)
+        marker = DemoSeed.objects.select_for_update().get(pk=marker.pk)
         existing = Report.objects.filter(owner=user, name="매출 현황 예제")
         if options["reset"]:
             removed_reports, removed_connections = reset_demo(user)
             self.stdout.write(f"기존 예제 초기화: 보고서 {removed_reports}개, 미사용 예제 연결 {removed_connections}개 정리")
         elif existing.exists():
+            marker.completed = True
+            marker.save(update_fields=["completed"])
             self.stdout.write("예제가 이미 존재합니다. 다시 만들려면 --reset 옵션을 사용하세요.")
             return
         text = io.StringIO()
@@ -95,6 +99,8 @@ class Command(BaseCommand):
         report = Report.objects.create(owner=user, project=project, name="매출 현황 예제", definition=definition,
                                        bindings=[binding], revision=1)
         Revision.objects.create(report=report, number=1, definition=definition, bindings=[binding])
+        marker.completed = True
+        marker.save(update_fields=["completed"])
         self.stdout.write(self.style.SUCCESS(f"예제 준비 완료: /reports/{report.pk}/design/"))
 
 
