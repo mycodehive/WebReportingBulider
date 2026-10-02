@@ -11,6 +11,12 @@ from reportbuilder.models import Report, ReportAccess
 @pytest.mark.django_db(transaction=True)
 def test_workspace_theme_fullscreen_and_statistics_downloads(live_server, client, settings, tmp_path):
     playwright = pytest.importorskip("playwright.sync_api")
+    settings.MEDIA_ROOT = tmp_path / "media"
+    user = get_user_model().objects.create_user(username="visual-test", is_staff=True)
+    call_command("seed_demo", username=user.username, verbosity=0)
+    report = Report.objects.get(owner=user, name="매출 현황 예제")
+    client.force_login(user)
+    ReportAccess.objects.create(report=report, event="view", country="KR", device="mobile", browser="safari", os="ios")
     with playwright.sync_playwright() as api:
         try:
             browser = api.chromium.launch()
@@ -18,11 +24,6 @@ def test_workspace_theme_fullscreen_and_statistics_downloads(live_server, client
             if "Executable doesn't exist" in str(exc):
                 pytest.skip("Chromium binary is unavailable")
             raise
-        settings.MEDIA_ROOT = tmp_path / "media"
-        user = get_user_model().objects.create_user(username="visual-test", is_staff=True)
-        call_command("seed_demo", username=user.username, verbosity=0)
-        report = Report.objects.get(owner=user, name="매출 현황 예제")
-        client.force_login(user)
         context = browser.new_context(viewport={"width": 1440, "height": 1000}, locale="ko-KR")
         context.add_cookies([{"name": settings.SESSION_COOKIE_NAME,
                              "value": client.cookies[settings.SESSION_COOKIE_NAME].value,
@@ -61,7 +62,6 @@ def test_workspace_theme_fullscreen_and_statistics_downloads(live_server, client
             page.locator("#workspace-fullscreen").click()
             playwright.expect(page.locator("#workspace-fullscreen")).to_have_attribute("aria-pressed", "false")
             page.goto(f"{live_server.url}/reports/{report.pk}/")
-            ReportAccess.objects.create(report=report, event="view", country="KR", device="mobile", browser="safari", os="ios")
             page.goto(f"{live_server.url}/reports/")
             page.locator(f'[data-report-statistics="{report.pk}"]').click()
             playwright.expect(page.locator("#statistics-dialog")).to_be_visible()
