@@ -99,6 +99,20 @@ def test_workspace_theme_fullscreen_and_statistics_downloads(live_server, client
             playwright.expect(page.locator("#share-list")).to_contain_text("공유 해제")
             assert visitor.reload().status == 404
             guest.close()
+            page.goto(f"{live_server.url}/connections/")
+            page.locator("#connection-kind").select_option("sheets")
+            playwright.expect(page.locator("#sheets-options")).to_be_visible()
+            playwright.expect(page.locator("#connection-json")).not_to_be_visible()
+            page.locator("#sheet-url").fill("https://docs.google.com/spreadsheets/d/abcdefghijk/edit#gid=42")
+            page.locator('[name="sheet_auth_mode"]').select_option("oauth")
+            page.screenshot(path=str(shots / "google-sheets-connection.png"), full_page=True)
+            page.get_by_role("link", name="Google OAuth 설정", exact=True).click()
+            playwright.expect(page.get_by_role("heading", name="Google OAuth 설정", exact=True)).to_be_visible()
+            page.screenshot(path=str(shots / "google-oauth-setup.png"), full_page=True)
+            page.locator('[name="client_id"]').fill("123-test.apps.googleusercontent.com")
+            page.locator('[name="client_secret"]').fill("synthetic-test-secret")
+            page.get_by_role("button", name="OAuth 설정 저장").click()
+            playwright.expect(page.locator(".alert")).to_contain_text("OAuth 설정을 저장했습니다")
             assert errors == []
         except Exception:
             page.screenshot(path=str(shots / "browser-failure.png"), full_page=True)
