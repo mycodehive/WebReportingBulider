@@ -3,6 +3,7 @@ import json
 import os
 import sys
 import tempfile
+from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -81,11 +82,32 @@ def validate_results(payload):
             "row_count": next(iter(datasets.values()))["row_count"]}
 
 
+def library_fixture():
+    request = RequestFactory().get("/reports/")
+    request.user = SimpleNamespace(
+        id=1, is_authenticated=True, is_staff=False, get_username=lambda: "DOM test"
+    )
+    reports = [
+        SimpleNamespace(pk=REPORT_ID, owner_id=1, owner="DOM test", revision=1,
+                        name='첫 보고서 <img src=x onerror="alert(1)">',
+                        updated_at=datetime(2026, 10, 2, 12)),
+        SimpleNamespace(pk="00000000-0000-0000-0000-000000000003", owner_id=1,
+                        owner="DOM test", revision=2, name="둘째 보고서",
+                        updated_at=datetime(2026, 10, 2, 12)),
+        SimpleNamespace(pk="00000000-0000-0000-0000-000000000004", owner_id=2,
+                        owner="Other owner", revision=1, name="공유받은 보고서",
+                        updated_at=datetime(2026, 10, 2, 12)),
+    ]
+    return {"html": render_to_string("reportbuilder/library.html", {"reports": reports}, request=request)}
+
+
 if __name__ == "__main__":
     if sys.argv[1] == "render":
         result = render_fixture()
     elif sys.argv[1] == "validate":
         result = validate_results(json.load(sys.stdin))
+    elif sys.argv[1] == "library":
+        result = library_fixture()
     else:
         raise SystemExit("Expected render or validate")
     print(json.dumps(result, ensure_ascii=False))

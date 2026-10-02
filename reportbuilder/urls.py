@@ -1,11 +1,14 @@
 from django.urls import path
 from . import views
+from . import analytics_views
 
 urlpatterns = [
     path("", views.dashboard, name="dashboard"),
     path("reports/", views.library, name="library"),
     path("reports/<uuid:report_id>/design/", views.designer, name="designer"),
     path("reports/<uuid:report_id>/", views.viewer, name="viewer"),
+    path("reports/<uuid:report_id>/statistics/", analytics_views.statistics_view, name="statistics"),
+    path("reports/<uuid:report_id>/statistics/export/<str:format>/", analytics_views.statistics_export, name="statistics_export"),
     path("reports/<uuid:report_id>/export/<str:format>/", views.report_export, name="report_export"),
     path("connections/", views.connections_page, name="connections"),
     path("manual/", views.manual, name="manual"),

@@ -139,3 +139,7 @@ docker compose up -d
 | DB 연결 성공, 조회 실패 | 테이블/컬럼 권한과 실제 매핑 확인 |
 | 운영 CSS가 안 보임 | `collectstatic`, STATIC_ROOT, reverse proxy 설정 확인 |
 | 자료형이 다르다는 오류 | 재연결에서 명시적인 타입 변환 선택 |
+
+## 보고서 통계 기능 업데이트
+
+업데이트 후 `uv run python manage.py migrate`로 접속 통계 테이블을 생성하세요. 국가 분석은 선택 의존성 `--extra geoip`와 서버의 GeoIP 국가 `.mmdb` 설정이 필요합니다. 설정하지 않아도 시간·기기·브라우저 통계는 제공되며 국가는 Unknown으로 표시됩니다. 자세한 사용법은 [작업 화면과 접속 통계](WORKSPACE_AND_ANALYTICS.md)를 참고하세요.
