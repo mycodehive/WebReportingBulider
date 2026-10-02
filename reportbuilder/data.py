@@ -12,6 +12,7 @@ import datetime as dt
 import functools
 import http.client
 import ipaddress
+import io
 import json
 import math
 import operator
@@ -24,7 +25,7 @@ import subprocess
 from contextlib import contextmanager
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from urllib.parse import quote, urlsplit
+from urllib.parse import quote, urlsplit, urlencode
 
 
 class DataError(Exception):
@@ -388,7 +389,7 @@ class _PinnedHTTPS(http.client.HTTPSConnection):
         self.sock = self._context.wrap_socket(raw, server_hostname=self.host)
 
 
-def _https_json(endpoint, headers=None, allowed_hosts=None):
+def _https_json(endpoint, headers=None, allowed_hosts=None, *, csv_text=False):
     """Exact host allowlist, public DNS/IP, TLS validation, no redirects or proxies.
 
     DNS is resolved once and the HTTPS socket is pinned to that validated address,
@@ -423,11 +424,18 @@ def _https_json(endpoint, headers=None, allowed_hosts=None):
         response = conn.getresponse()
         if response.status == 429:
             raise DataError("RATE_LIMIT", "자료 API 요청 한도에 도달했습니다. 잠시 후 다시 실행하세요.")
+        if response.status != 200 and csv_text:
+            raise DataError('AUTH_REQUIRED', '공개 시트를 읽을 수 없습니다. 링크 공개/다운로드 권한을 확인하거나 OAuth로 연결하세요.')
         if response.status != 200:
             raise DataError("REMOTE_ERROR", "자료 API가 정상 응답하지 않았습니다. 연결 권한과 고정 주소를 확인하세요.")
         raw = response.read(_SOURCE_BYTES + 1)
         if len(raw) > _SOURCE_BYTES:
             raise DataError("DATA_LIMIT", "자료 API 응답이 허용 크기를 초과했습니다.")
+        if csv_text:
+            content_type = response.getheader('Content-Type', '').split(';')[0].lower()
+            if content_type not in {'text/csv', 'text/plain', 'application/csv'} or raw.lstrip().startswith(b'<'):
+                raise DataError('AUTH_REQUIRED', '공개 CSV를 읽을 수 없습니다. 링크 공개 설정을 확인하거나 OAuth로 연결하세요.')
+            return raw.decode('utf-8-sig')
         return json.loads(raw)
     finally:
         conn.close()
@@ -463,12 +471,32 @@ def _sheet_base(config):
 
 def _sheet_records(config, name, limit):
     header = _integer(config.get("header_row"), 1, 1, 10000)
+    if config.get('auth_mode') == 'public':
+        _sheet_base(config)
+        if header != 1:
+            raise DataError('INVALID_CONFIG', '공개 시트는 첫 행을 헤더로 사용합니다. 다른 헤더 행은 OAuth로 연결하세요.')
+        query = {'tqx': 'out:csv', 'headers': '1'}
+        if config.get('sheet'):
+            query['sheet'] = str(config['sheet'])
+        else:
+            gid = str(config.get('gid', '0'))
+            if not re.fullmatch(r'\d{1,20}', gid):
+                raise DataError('INVALID_CONFIG', '시트 gid가 올바르지 않습니다.')
+            query['gid'] = gid
+        endpoint = 'https://docs.google.com/spreadsheets/d/' + config['spreadsheet_id'] + '/gviz/tq?' + urlencode(query)
+        raw = _https_json(endpoint, {}, ['docs.google.com'], csv_text=True)
+        values = list(csv.reader(io.StringIO(raw)))[header - 1:]
+        return _sheet_values(values, limit)
     # Escaping quotes in A1 avoids interpreting a sheet name as a range formula.
     # Read the complete bounded API response, not a row window: blank rows must
     # not cause a truncated source to look like a complete aggregate snapshot.
     span = "'" + name.replace("'", "''") + "'"
     payload = _https_json(_sheet_base(config) + "/values/" + quote(span, safe="") + "?valueRenderOption=UNFORMATTED_VALUE&dateTimeRenderOption=FORMATTED_STRING", _sheet_headers(config), ["sheets.googleapis.com"])
     values = payload.get("values", [])[header - 1:]
+    return _sheet_values(values, limit)
+
+
+def _sheet_values(values, limit):
     names = _headers(values[0] if values else [])
     if len(names) > 4096:
         raise DataError("DATA_LIMIT", "Google Sheets 열 수가 허용 범위를 초과했습니다.")
@@ -551,6 +579,10 @@ def introspect(kind, config):
         elif kind in {"postgresql", "mariadb", "oracle", "mssql"}:
             objects = _sql_schema(kind, config)
         elif kind == "google_sheets":
+            if config.get('auth_mode') == 'public':
+                name = config.get('sheet') or '공개 시트'
+                names, rows = _sheet_records(config, name, 100)
+                return {'objects': [_object(name, _columns(names, rows), typ='sheet')]}
             payload = _https_json(_sheet_base(config) + "?fields=sheets.properties", _sheet_headers(config), ["sheets.googleapis.com"])
             objects = []
             for sheet in payload.get("sheets", []):
