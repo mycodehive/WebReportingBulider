@@ -42,10 +42,16 @@ class Connection(Owned):
             json.dumps(secrets).encode()
         ).decode() if secrets else ""
 
+    def get_secrets(self):
+        if not self.encrypted_secrets:
+            return {}
+        return json.loads(Fernet(settings.REPORT_SECRET_KEY.encode()).decrypt(
+            self.encrypted_secrets.encode()
+        ))
+
     def runtime_config(self):
         value = dict(self.config)
-        if self.encrypted_secrets:
-            value.update(json.loads(Fernet(settings.REPORT_SECRET_KEY.encode()).decrypt(self.encrypted_secrets.encode())))
+        value.update(self.get_secrets())
         if self.upload:
             value["path"] = self.upload.path
         if self.kind == "rest":

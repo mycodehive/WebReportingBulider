@@ -280,6 +280,7 @@ def execute_api(request, report_id):
 
 
 SECRET_FIELDS = {"password", "access_token", "refresh_token", "service_account", "headers", "api_key", "wallet_password"}
+EDITABLE_SECRET_FIELDS = SECRET_FIELDS - {"access_token", "refresh_token"}
 FILE_EXTENSIONS = {"excel": {".xlsx", ".xlsm"}, "csv": {".csv", ".tsv"},
                    "sqlite": {".sqlite", ".sqlite3", ".db"}, "access": {".mdb", ".accdb"}}
 
@@ -327,8 +328,79 @@ def connections_page(request):
             raise
         except (ValueError, KeyError, TypeError):
             messages.error(request, "연결 설정 JSON, 파일 형식 및 크기를 확인해 주세요.")
-    return render(request, "reportbuilder/connections.html", {"connections": connections_for(request.user),
+    connections = list(connections_for(request.user))
+    for connection in connections:
+        editable_config = {key: value for key, value in connection.config.items() if key != "oauth_attempt"}
+        connection.editable_config = json.dumps(editable_config, ensure_ascii=False, indent=2)
+        connection.secret_names = sorted(connection.get_secrets())
+        connection.file_extensions = sorted(FILE_EXTENSIONS.get(connection.kind, []))
+    return render(request, "reportbuilder/connections.html", {"connections": connections,
                   "connectors": connector_catalog()})
+
+
+@login_required
+@require_POST
+def connection_update(request, connection_id):
+    if not request.user.is_staff:
+        raise PermissionDenied("데이터 연결 수정은 관리자만 할 수 있습니다.")
+    connection = get_object_or_404(Connection, pk=connection_id, owner=request.user)
+    try:
+        name = request.POST.get("name", "").strip()
+        config = json.loads(request.POST.get("config", "{}"))
+        secret_updates = json.loads(request.POST.get("secret_updates", "{}") or "{}")
+        if (not name or not isinstance(config, dict) or not isinstance(secret_updates, dict)
+                or len(json.dumps(config)) > 100000 or set(config) & (SECRET_FIELDS | {"path", "allowed_hosts", "url", "connection_string"})
+                or "oauth_attempt" in config
+                or set(secret_updates) - EDITABLE_SECRET_FIELDS
+                or len(json.dumps(secret_updates)) > 100000
+                or request.POST.get("clear_secrets") == "yes" and secret_updates):
+            raise ValueError("연결 설정을 확인하세요.")
+        if any((key in {"headers", "service_account"} and not isinstance(value, dict))
+               or (key not in {"headers", "service_account"} and not isinstance(value, str))
+               for key, value in secret_updates.items()):
+            raise ValueError("비밀 정보의 형식을 확인하세요.")
+        upload = request.FILES.get("file")
+        if upload:
+            allowed = FILE_EXTENSIONS.get(connection.kind)
+            if not allowed or upload.size > 50 * 1024 * 1024 or Path(upload.name).suffix.lower() not in allowed:
+                raise ValueError("파일 형식 또는 크기를 확인하세요.")
+        secrets = {} if request.POST.get("clear_secrets") == "yes" else connection.get_secrets()
+        secrets.update({key: value for key, value in secret_updates.items() if value not in (None, "")})
+        if config.get("auth_mode") != "oauth" and connection.config.get("auth_mode") == "oauth":
+            for key in ("oauth_client_id", "refresh_token", "access_token", "expires_at"):
+                secrets.pop(key, None)
+        old_upload = connection.upload if upload else None
+        connection.name = name[:200]
+        connection.config = config
+        connection.set_secrets(secrets)
+        if upload:
+            connection.upload = upload
+        connection.status = "UNTESTED"
+        connection.last_test_at = None
+        connection.save()
+        if old_upload:
+            old_upload.delete(save=False)
+        audit(request.user, "connection_update", connection.pk, connector=connection.kind)
+        messages.success(request, "데이터 연결을 수정했습니다. 연결 테스트로 확인해 주세요.")
+    except (ValueError, TypeError, json.JSONDecodeError):
+        messages.error(request, "연결 설정 JSON, 비밀 정보 또는 파일 형식을 확인해 주세요.")
+    return redirect("connections")
+
+
+@login_required
+@require_POST
+def connection_delete(request, connection_id):
+    if not request.user.is_staff:
+        raise PermissionDenied("데이터 연결 삭제는 관리자만 할 수 있습니다.")
+    connection = get_object_or_404(Connection, pk=connection_id, owner=request.user)
+    upload_name = connection.upload.name if connection.upload else None
+    upload_storage = connection.upload.storage if upload_name else None
+    audit(request.user, "connection_delete", connection.pk, connector=connection.kind)
+    connection.delete()
+    if upload_storage:
+        upload_storage.delete(upload_name)
+    messages.success(request, "데이터 연결을 삭제했습니다. 이 연결을 사용하는 보고서는 다시 매핑해야 합니다.")
+    return redirect("connections")
 
 
 @api

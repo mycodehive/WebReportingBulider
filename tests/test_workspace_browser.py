@@ -6,7 +6,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
 
-from reportbuilder.models import Report, ReportAccess
+from reportbuilder.models import Connection, Report, ReportAccess
 
 
 @pytest.mark.django_db(transaction=True)
@@ -16,6 +16,8 @@ def test_workspace_theme_fullscreen_and_statistics_downloads(live_server, client
     user = get_user_model().objects.create_user(username="visual-test", is_staff=True)
     call_command("seed_demo", username=user.username, verbosity=0)
     report = Report.objects.get(owner=user, name="매출 현황 예제")
+    managed_connection = Connection.objects.create(owner=user, name="Browser connection", kind="postgresql",
+                                                  config={"host": "db.internal", "database": "reports"})
     client.force_login(user)
     assert client.post(f"/api/reports/{report.pk}/publish/", {}, content_type="application/json").status_code == 200
     ReportAccess.objects.create(report=report, event="view", country="KR", device="mobile", browser="safari", os="ios")
@@ -113,6 +115,18 @@ def test_workspace_theme_fullscreen_and_statistics_downloads(live_server, client
             page.locator('[name="client_secret"]').fill("synthetic-test-secret")
             playwright.expect(page.locator('[name="client_id"]')).to_have_value("123-test.apps.googleusercontent.com")
             playwright.expect(page.locator('[name="client_secret"]')).to_have_value("synthetic-test-secret")
+            page.goto(f"{live_server.url}/connections/")
+            edit = page.locator(f'details[data-edit-connection="{managed_connection.pk}"]')
+            edit.locator("summary").click()
+            edit.locator('[name="name"]').fill("Updated browser connection")
+            edit.locator('[name="config"]').fill('{"host":"db-updated.internal","database":"reports"}')
+            edit.locator('button[type="submit"]').click()
+            playwright.expect(page.locator(".alert")).to_contain_text("데이터 연결을 수정했습니다")
+            playwright.expect(page.locator("tbody")).to_contain_text("Updated browser connection")
+            page.once("dialog", lambda dialog: dialog.accept())
+            page.locator(f'[data-connection-delete-id="{managed_connection.pk}"]').click()
+            playwright.expect(page.locator(".alert")).to_contain_text("데이터 연결을 삭제했습니다")
+            playwright.expect(page.locator("tbody")).not_to_contain_text("Updated browser connection")
             assert errors == []
         except Exception:
             page.screenshot(path=str(shots / "browser-failure.png"), full_page=True)
