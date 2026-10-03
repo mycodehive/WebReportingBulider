@@ -119,3 +119,20 @@ class MenuConfiguration(models.Model):
     items = models.JSONField(default=default_menu_items)
     updated_at = models.DateTimeField(auto_now=True)
 
+
+
+class WorkspaceMenu(models.Model):
+    key = models.SlugField("키", max_length=50, unique=True)
+    label = models.CharField("메뉴명", max_length=40)
+    url = models.CharField("내부 주소", max_length=255)
+    order = models.IntegerField("순서", default=0)
+    staff_only = models.BooleanField("관리자 전용", default=False)
+    active = models.BooleanField("사용", default=True)
+
+    class Meta:
+        ordering = ["order", "label", "key"]
+        verbose_name = "워크스페이스 메뉴"
+        verbose_name_plural = "워크스페이스 메뉴"
+
+    def __str__(self):
+        return self.label
