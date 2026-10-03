@@ -1,0 +1,35 @@
+:root{--admin-accent:#4f46e5;--admin-border:#e0e6f0;--admin-surface:#fff;--admin-page:#f5f7fb;--admin-text:#182238;--admin-muted:#738197}
+body{background:var(--admin-page);color:var(--admin-text);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",sans-serif}
+#header{background:var(--admin-surface);color:var(--admin-text);border-bottom:1px solid var(--admin-border);box-shadow:0 2px 8px #16223808}
+#branding h1{font-size:18px;font-weight:750;letter-spacing:-.4px}
+#branding h1 a{color:var(--admin-text)}
+#branding h1 span{display:inline-block;margin-left:8px;padding:4px 8px;border-radius:6px;background:#eeedff;color:var(--admin-accent);font-size:10px;letter-spacing:0;vertical-align:middle}
+#user-tools{color:var(--admin-muted)}
+#user-tools a{color:var(--admin-accent)}
+#nav-sidebar{background:var(--admin-surface);border-right:1px solid var(--admin-border)}
+#nav-sidebar .current-model,#nav-sidebar .current-app .section{background:#eeedff}
+#nav-sidebar a:link,#nav-sidebar a:visited{color:#526078}
+#nav-sidebar .current-model a,#nav-sidebar .current-app .section a{color:var(--admin-accent);font-weight:700}
+#content{max-width:1680px;padding:26px 30px}
+#content h1{font-size:24px;letter-spacing:-.5px;color:#182238}
+.breadcrumbs{background:transparent;color:var(--admin-muted);padding:10px 30px}
+.breadcrumbs a{color:var(--admin-accent)}
+.module,#changelist .results,.dashboard .module{background:var(--admin-surface);border:1px solid var(--admin-border);border-radius:11px;overflow:hidden;box-shadow:0 2px 5px #16223806}
+.module h2,.module caption,.inline-group h2{background:#f8fafc;color:#334155;border-bottom:1px solid var(--admin-border)}
+#changelist-filter{background:var(--admin-surface);border-left:1px solid var(--admin-border)}
+#changelist table thead th{background:#f8fafc;color:#738197}
+#changelist table tbody tr:hover{background:#fafbfe}
+#changelist table td,#changelist table th{border-bottom:1px solid #edf0f5}
+input,select,textarea{border:1px solid #dce3ee;border-radius:6px;padding:7px 9px;color:#27344c}
+input:focus,select:focus,textarea:focus{border-color:#818cf8;outline:3px solid #6366f118}
+.button, input[type=submit], input[type=button], .submit-row input, a.button{border-radius:7px;font-weight:650}
+.button.default, input[type=submit].default, .submit-row input.default{background:var(--admin-accent);color:#fff}
+.button.default:hover,input[type=submit].default:hover,.submit-row input.default:hover{background:#4338ca}
+.object-tools a{background:var(--admin-accent);border-radius:7px}
+.object-tools a:hover{background:#4338ca}
+.submit-row{background:#f8fafc;border:1px solid var(--admin-border);border-radius:9px}
+.paginator{color:var(--admin-muted)}
+.admin-menu-guide{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0 0 18px;padding:15px;background:#fff;border:1px solid var(--admin-border);border-left:4px solid var(--admin-accent);border-radius:9px}
+.admin-menu-guide strong{display:block;margin-bottom:5px;color:#334155;font-size:12px}
+.admin-menu-guide p{margin:0;color:#738197;font-size:12px;line-height:1.7}
+@media(max-width:767px){#content{padding:18px 14px}.breadcrumbs{padding:8px 14px}.admin-menu-guide{grid-template-columns:1fr}#header{padding:12px 14px}#user-tools{font-size:11px}}
