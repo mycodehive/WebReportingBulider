@@ -95,6 +95,8 @@ def test_cross_user_access_and_policy_revocation(author_client, data_report):
     assert post(author_client, f"/api/reports/{report.pk}/publish/").status_code == 200
     assert post(c, f"/api/reports/{report.pk}/execute/").status_code == 403
     connection.groups.add(group)
+    assert c.get("/api/connections/").json()["connections"] == []
+    assert "합성 매출 CSV" not in c.get("/connections/").content.decode()
     response = post(c, f"/api/reports/{report.pk}/execute/")
     assert response.status_code == 200
     execution_id = response.json()["execution_id"]
