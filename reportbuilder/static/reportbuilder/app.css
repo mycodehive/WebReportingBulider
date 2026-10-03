@@ -85,3 +85,7 @@ html[data-sidebar="collapsed"] .company-brand-logo{max-width:40px;object-positio
 .menu-checkbox{display:flex;align-items:center;gap:6px;min-height:36px;color:var(--muted);font-size:11px;font-weight:600;white-space:nowrap}
 .menu-checkbox input{accent-color:var(--accent)}
 @media(max-width:900px){.menu-create-form{grid-template-columns:repeat(2,minmax(0,1fr))}.menu-create-form .button{grid-column:1/-1}}
+
+/* Keep dashboard cover artwork inside its thumbnail in every viewport. */
+.report-thumbnail{position:relative;min-width:0;overflow:hidden;aspect-ratio:16/9;height:auto;min-height:125px;max-height:180px}
+.report-thumbnail img{display:block;width:100%;height:100%;min-width:0;max-width:100%;object-fit:contain;object-position:center;border-radius:inherit}
