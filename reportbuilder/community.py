@@ -1,9 +1,10 @@
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q
-from django.http import HttpResponseForbidden
+from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods, require_POST
@@ -233,3 +234,42 @@ def reply_edit(request, board_id, post_id, reply_id):
         form.save()
         return redirect('board_post', board_id=board.pk, post_id=post.pk)
     return render(request, 'reportbuilder/boards/form.html', {'board': board, 'post': post, 'form': form, 'reply': reply, 'heading': '답변 / 댓글 수정'})
+
+
+@login_required
+@never_cache
+@require_http_methods(['GET'])
+def user_search(request):
+    board_id = request.GET.get('board', '').strip()
+    if board_id:
+        board = get_object_or_404(Board, pk=board_id)
+        if not manager(board, request.user):
+            return HttpResponseForbidden()
+    elif not request.user.is_staff:
+        return HttpResponseForbidden()
+
+    query = request.GET.get('q', '').strip()[:120]
+    if len(query) < 2:
+        return JsonResponse({'results': []})
+
+    User = get_user_model()
+    lookup = Q(username__icontains=query) | Q(email__icontains=query)
+    if User.USERNAME_FIELD != 'username':
+        lookup |= Q(**{f'{User.USERNAME_FIELD}__icontains': query})
+    if any(field.name == 'first_name' for field in User._meta.get_fields()):
+        lookup |= Q(first_name__icontains=query) | Q(last_name__icontains=query)
+    if query.isdecimal():
+        lookup |= Q(pk=int(query))
+    users = User.objects.filter(is_active=True).filter(lookup).order_by('username').distinct()[:20]
+    results = []
+    for user in users:
+        full_name = user.get_full_name().strip() if hasattr(user, 'get_full_name') else ''
+        results.append({
+            'id': str(user.pk),
+            'username': str(getattr(user, 'username', getattr(user, User.USERNAME_FIELD, ''))),
+            'name': full_name or str(getattr(user, User.USERNAME_FIELD, user.pk)),
+            'email': str(getattr(user, 'email', '') or ''),
+        })
+    response = JsonResponse({'results': results})
+    response['Cache-Control'] = 'private, no-store'
+    return response

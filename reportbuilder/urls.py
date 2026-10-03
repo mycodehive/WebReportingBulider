@@ -1,11 +1,13 @@
 from django.urls import path
 from . import views, google_oauth, sharing
 from . import analytics_views
-from . import branding, community
+from . import branding, community, menu_views
 
 urlpatterns = [
     path('settings/company/', branding.settings, name='company_settings'),
+    path('menu-management/', menu_views.menu_management, name='menu_management'),
     path('company/logo/', branding.logo, name='company_logo'),
+    path('boards/users/search/', community.user_search, name='board_user_search'),
     path('boards/', community.index, name='board_index'),
     path('boards/new/', community.settings, name='board_create'),
     path('boards/<uuid:board_id>/', community.listing, name='board_list'),

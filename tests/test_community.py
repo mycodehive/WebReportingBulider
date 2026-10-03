@@ -7,7 +7,8 @@ from django.urls import reverse
 from PIL import Image
 
 from reportbuilder.community_forms import BoardForm, clean_html
-from reportbuilder.models import Board, BoardCategory, BoardPost, BoardReply, BoardStatus, CompanyBranding
+from reportbuilder.models import Board, BoardCategory, BoardPost, BoardReply, BoardStatus, CompanyBranding, MenuConfiguration
+from reportbuilder.community_models import default_menu_items
 
 pytestmark = pytest.mark.django_db
 
@@ -209,3 +210,53 @@ def test_csrf_required(client, community):
     strict.force_login(users['admin'])
     assert strict.post(url('board_delete', board)).status_code == 403
     assert strict.post(url('board_post', board, posts['alice']), {'body': 'hello'}).status_code == 403
+
+
+def test_board_user_search_matches_username_and_email_and_checks_permissions(client, community):
+    users, board, _, _ = community
+    users['alice'].first_name = 'Alice Example'
+    users['alice'].email = 'alice@example.com'
+    users['alice'].save(update_fields=['first_name', 'email'])
+    inactive = get_user_model().objects.create_user('inactive-match', password='testpassword', is_active=False)
+    client.force_login(users['admin'])
+
+    response = client.get(reverse('board_user_search'), {'q': 'alice'})
+    assert response.status_code == 200
+    assert [item['id'] for item in response.json()['results']] == [str(users['alice'].pk)]
+    assert client.get(reverse('board_user_search'), {'q': 'Alice Example'}).json()['results'][0]['id'] == str(users['alice'].pk)
+    response = client.get(reverse('board_user_search'), {'q': 'alice@example.com'})
+    assert response.json()['results'][0]['email'] == 'alice@example.com'
+    assert client.get(reverse('board_user_search'), {'q': 'a'}).json()['results'] == []
+    assert str(inactive.pk) not in [item['id'] for item in client.get(
+        reverse('board_user_search'), {'q': 'inactive-match'}).json()['results']]
+
+    client.force_login(users['manager'])
+    assert client.get(reverse('board_user_search'), {'q': 'alice', 'board': board.pk}).status_code == 200
+    assert client.get(reverse('board_user_search'), {'q': 'alice'}).status_code == 403
+    client.force_login(users['operator'])
+    assert client.get(reverse('board_user_search'), {'q': 'alice', 'board': board.pk}).status_code == 403
+
+
+def test_menu_management_saves_labels_and_order_and_requires_staff(client, community):
+    users, _, _, _ = community
+    client.force_login(users['admin'])
+    items = default_menu_items()
+    labels = [item['label'] for item in items]
+    labels[0] = '홈'
+    orders = [str(item['order']) for item in items]
+    orders[0] = '90'
+    orders[1] = '5'
+    keys = [item['key'] for item in items]
+
+    response = client.post(reverse('menu_management'), {'keys': keys, 'labels': labels, 'orders': orders})
+    assert response.status_code == 302
+    config = MenuConfiguration.objects.get(pk=1)
+    assert next(item for item in config.items if item['key'] == 'dashboard')['label'] == '홈'
+
+    response = client.get(reverse('dashboard'))
+    html = response.content.decode()
+    assert 'aria-label="홈"' in html
+    assert html.index('보고서 라이브러리') < html.index('aria-label="홈"')
+
+    client.force_login(users['alice'])
+    assert client.get(reverse('menu_management')).status_code == 403

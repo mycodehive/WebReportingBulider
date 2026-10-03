@@ -1,3 +1,17 @@
 {% extends 'reportbuilder/base.html' %}
 {% block title %}게시판 설정{% endblock %}
-{% block content %}<section class="community-page"><div class="community-heading"><div><a href="{% url 'board_index' %}">← 게시판</a><h1>{% if board %}{{ board.name }} 설정{% else %}게시판 만들기{% endif %}</h1></div></div><div class="community-columns"><div class="card community-card"><form method="post" class="community-form">{% csrf_token %}{{ form.as_p }}<p class="muted">사용자 글쓰기 허용을 끄면 관리자와 운영자만 새 글을 작성할 수 있습니다.</p><button class="button button-primary" type="submit">게시판 저장</button></form></div><aside class="card community-card"><h2>권한 안내</h2><p>전체 관리자: 모든 게시판 생성·설정·운영</p><p>게시판 관리자: 담당 게시판 설정·삭제·게시글 관리</p><p>운영자: 담당 게시판 글·답변·처리 상태 관리</p><p>사용자: 리스트·카드형 글 열람 및 자기 글 관리. 질문답변형에서는 자기 질문만 열람합니다.</p><p class="muted">관리자와 운영자는 담당 게시판의 모든 1:1 질문을 볼 수 있습니다.</p>{% if board %}<div class="community-actions"><a class="button button-secondary" href="{% url 'board_taxonomy' board.id %}">카테고리 / 상태 관리</a><a class="button button-secondary" href="{% url 'board_list' board.id %}">게시판 열기</a><a class="community-danger" href="{% url 'board_delete' board.id %}">게시판 삭제</a></div>{% endif %}</aside></div></section>{% endblock %}
+{% block content %}<section class="community-page"><div class="community-heading"><div><a href="{% url 'board_index' %}">← 게시판</a><h1>{% if board %}{{ board.name }} 설정{% else %}게시판 만들기{% endif %}</h1></div></div><div class="community-columns"><div class="card community-card"><form method="post" class="community-form">{% csrf_token %}{% for field in form %}
+{% if field.name == 'managers' or field.name == 'operators' %}
+<div class="user-picker" data-user-picker data-search-url="{% url 'board_user_search' %}" {% if board %}data-board="{{ board.id }}"{% endif %}>
+  <label for="search-{{ field.name }}">{{ field.label }}</label>
+  <input class="input user-picker-search" type="search" id="search-{{ field.name }}" autocomplete="off" placeholder="이름, 아이디 또는 이메일 검색" aria-label="{{ field.label }} 검색">
+  <div class="user-picker-results" role="listbox" aria-label="검색 결과"></div>
+  <div class="user-picker-selected" aria-live="polite"></div>
+  <div class="sr-only">{{ field }}</div>
+  {% if field.help_text %}<small class="helptext">{{ field.help_text }}</small>{% endif %}
+  {{ field.errors }}
+</div>
+{% else %}
+<p>{{ field.label_tag }}{{ field }}{% if field.help_text %}<small class="helptext">{{ field.help_text }}</small>{% endif %}{{ field.errors }}</p>
+{% endif %}
+{% endfor %}<p class="muted">사용자 글쓰기 허용을 끄면 관리자와 운영자만 새 글을 작성할 수 있습니다.</p><button class="button button-primary" type="submit">게시판 저장</button></form></div><aside class="card community-card"><h2>권한 안내</h2><p>전체 관리자: 모든 게시판 생성·설정·운영</p><p>게시판 관리자: 담당 게시판 설정·삭제·게시글 관리</p><p>운영자: 담당 게시판 글·답변·처리 상태 관리</p><p>사용자: 리스트·카드형 글 열람 및 자기 글 관리. 질문답변형에서는 자기 질문만 열람합니다.</p><p class="muted">관리자와 운영자는 담당 게시판의 모든 1:1 질문을 볼 수 있습니다.</p>{% if board %}<div class="community-actions"><a class="button button-secondary" href="{% url 'board_taxonomy' board.id %}">카테고리 / 상태 관리</a><a class="button button-secondary" href="{% url 'board_list' board.id %}">게시판 열기</a><a class="community-danger" href="{% url 'board_delete' board.id %}">게시판 삭제</a></div>{% endif %}</aside></div></section>{% endblock %}

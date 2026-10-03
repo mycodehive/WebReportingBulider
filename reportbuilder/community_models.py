@@ -83,3 +83,23 @@ class BoardReply(models.Model):
 
     class Meta:
         ordering = ['created_at', 'id']
+
+
+def default_menu_items():
+    return [
+        {'key': 'dashboard', 'label': '대시보드', 'order': 10},
+        {'key': 'reports', 'label': '보고서 라이브러리', 'order': 20},
+        {'key': 'connections', 'label': '데이터 연결', 'order': 30},
+        {'key': 'boards', 'label': '게시판', 'order': 40},
+        {'key': 'company', 'label': '회사 로고', 'order': 50},
+        {'key': 'manual', 'label': '사용 가이드', 'order': 60},
+        {'key': 'admin', 'label': '관리 설정', 'order': 70},
+        {'key': 'menu_management', 'label': '메뉴관리', 'order': 80},
+    ]
+
+
+class MenuConfiguration(models.Model):
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    items = models.JSONField(default=default_menu_items)
+    updated_at = models.DateTimeField(auto_now=True)
+
