@@ -11,9 +11,15 @@
   const bandLabels = {ReportHeader:'보고서 머리글',PageHeader:'페이지 머리글',Detail:'상세 반복',PageFooter:'페이지 바닥글',ReportFooter:'보고서 바닥글'};
   const id = root.dataset.reportId, endpoint = `/api/reports/${id}/`;
   let definition = JSON.parse($('report-definition').textContent), revision = Number(root.dataset.revision || 1);
-  let bindings = [], pageIndex = 0, selected = null, activeBand = null, zoom = 0.65, dirty = false;
+  let bindings = [], pageIndex = 0, selected = null, activeBand = null, zoom = 1, dirty = false;
   let connections = [], objects = [], history = [], future = [], assetURLs = {}, pendingImage = null, queryDraft = null, saving = false;
   const px = 96 / 25.4;
+  function updatePublicationLink(url) {
+    const link = $('publication-link');
+    link.hidden = !url;
+    if (url) link.href = url;
+    else link.removeAttribute('href');
+  }
   let magneticEnabled = true, activeDrag = null;
   $('magnetic-toggle').onclick = () => {
     magneticEnabled = !magneticEnabled;
@@ -213,7 +219,7 @@
   function renderPreviewParameters(){$('preview-parameters').replaceChildren();for(const p of definition.parameters||[]){const input=textControl(p.default??'',p.type==='date'?'date':p.type==='number'||p.type==='integer'?'number':'text');input.dataset.parameter=p.name;if(input.type==='number')input.step=p.type==='integer'?'1':'any';if(p.required)input.required=true;fieldControl($('preview-parameters'),p.label||p.name,input);}if(!definition.parameters?.length)$('preview-parameters').append(node('p','help-text','저장된 데이터 연결로 보고서를 조회합니다.'));}
   async function preview(){const parameters={};for(const input of $('preview-parameters').querySelectorAll('[data-parameter]')){if(!input.reportValidity())return;const p=definition.parameters.find(p=>p.name===input.dataset.parameter);if(input.value===''&&!input.required&&p.type!=='string')continue;parameters[input.dataset.parameter]=['number','integer'].includes(p.type)&&input.value!==''?Number(input.value):p.type==='boolean'?input.value==='true':input.value;}await save();$('preview-count').textContent='보고서 생성 중…';const result=await api(`${endpoint}preview/`,'POST',{parameters});$('preview-frame').srcdoc=result.html;$('preview-count').textContent=`${result.page_count}페이지`;}
   $('preview').onclick=()=>attempt(async()=>{renderPreviewParameters();$('preview-dialog').showModal();if(!definition.parameters?.some(p=>p.required&&(p.default===undefined||p.default==='')))await preview();});$('refresh-preview').onclick=()=>attempt(preview);
-  $('publish').onclick=()=>attempt(async()=>{await save();const result=await api(`${endpoint}publish/`,'POST',{parameters:Object.fromEntries((definition.parameters||[]).filter(p=>p.default!==undefined||$('preview-parameters').querySelector(`[data-parameter="${p.name}"]`)?.value).map(p=>{const input=$('preview-parameters').querySelector(`[data-parameter="${p.name}"]`);let value=input?.value??p.default;if(['number','integer'].includes(p.type)&&value!=='')value=Number(value);if(p.type==='boolean')value=value===true||value==='true';return [p.name,value];}))});message('보고서를 게시했습니다.');if(result.publication_url){const a=node('a','text-link',' 게시된 보고서 보기');a.href=result.publication_url;a.target='_blank';a.rel='noopener';$('designer-message').append(a);}});
+  $('publish').onclick=()=>attempt(async()=>{await save();const result=await api(`${endpoint}publish/`,'POST',{parameters:Object.fromEntries((definition.parameters||[]).filter(p=>p.default!==undefined||$('preview-parameters').querySelector(`[data-parameter="${p.name}"]`)?.value).map(p=>{const input=$('preview-parameters').querySelector(`[data-parameter="${p.name}"]`);let value=input?.value??p.default;if(['number','integer'].includes(p.type)&&value!=='')value=Number(value);if(p.type==='boolean')value=value===true||value==='true';return [p.name,value];}))});message('보고서를 게시했습니다.');updatePublicationLink(result.publication_url);});
   $('export-format').onchange=()=>{const format=$('export-format').value;$('export-format').value='';if(format)attempt(async()=>{await save();window.location.href=`/reports/${id}/export/${format}/`;});};
   document.querySelectorAll('[data-close]').forEach(button=>button.onclick=()=>$(button.dataset.close).close());
   function queryFieldSelect(value){return selectControl((dataset()?.fields||[]).map(f=>[f.field_id,fieldLabel(f)]),value);}
@@ -228,5 +234,5 @@
   document.addEventListener('keydown',event=>{if(document.querySelector('dialog[open]')||/INPUT|TEXTAREA|SELECT/.test(event.target.tagName))return;if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='z'){event.preventDefault();$(event.shiftKey?'redo':'undo').click();return;}if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='s'){event.preventDefault();$('save').click();return;}const hit=findElement(selected);if(!hit)return;if(event.key==='Delete'||event.key==='Backspace'){event.preventDefault();removeElement();}if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)){event.preventDefault();mutate(()=>{const g=hit.element.geometry,delta=event.shiftKey?5:1;if(event.key==='ArrowLeft')g.x_mm=Math.max(0,g.x_mm-delta);if(event.key==='ArrowRight')g.x_mm+=delta;if(event.key==='ArrowUp')g.y_mm=Math.max(0,g.y_mm-delta);if(event.key==='ArrowDown')g.y_mm+=delta;});}});
   window.addEventListener('beforeunload',event=>{if(dirty){event.preventDefault();event.returnValue='';}});
   definition.datasets ||= [];definition.parameters ||= [];definition.pages ||= [freshPage()];definition.pages.forEach(p=>{p.elements||=[];p.bands||=[];p.margins||={top:15,right:15,bottom:15,left:15};});render();
-  attempt(async()=>{const result=await api(endpoint);bindings=result.bindings||[];revision=result.revision??revision;const list=await api('/api/connections/');connections=Array.isArray(list)?list:list.connections||list.results||[];$('connection-select').replaceChildren(option('','연결 선택'),...connections.map(c=>option(c.id,`${c.name} · ${c.kind||c.connector||''}`)));});
+  attempt(async()=>{const result=await api(endpoint);bindings=result.bindings||[];revision=result.revision??revision;updatePublicationLink(result.publication_url);const list=await api('/api/connections/');connections=Array.isArray(list)?list:list.connections||list.results||[];$('connection-select').replaceChildren(option('','연결 선택'),...connections.map(c=>option(c.id,`${c.name} · ${c.kind||c.connector||''}`)));});
 })();

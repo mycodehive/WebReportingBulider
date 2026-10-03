@@ -79,16 +79,18 @@ def body(request):
 
 def report_payload(report, user=None):
     publication = getattr(report, "publication", None)
+    publication_url = reverse("publication", args=[publication.pk]) if publication and publication.enabled and report.enabled else None
     if user is not None and not (user.is_staff or report.owner_id == user.pk):
         # Viewer access authorizes a published version, never an in-progress draft
         # or local source mappings. Keep the same payload keys for API consumers.
         revision = publication.revision if publication and publication.enabled and report.enabled else None
         return {"id": str(report.pk), "name": report.name, "definition": revision.definition if revision else None,
                 "revision": revision.number if revision else None, "bindings": [], "enabled": report.enabled,
-                "published_revision": revision.number if revision else None}
+                "published_revision": revision.number if revision else None, "publication_url": publication_url}
     return {"id": str(report.pk), "name": report.name, "definition": report.definition,
             "revision": report.revision, "bindings": report.bindings, "enabled": report.enabled,
-            "published_revision": publication.revision.number if publication and publication.enabled else None}
+            "published_revision": publication.revision.number if publication and publication.enabled else None,
+            "publication_url": publication_url}
 
 
 def new_revision(report):
@@ -135,7 +137,8 @@ def ensure_demo(request):
 def designer(request, report_id):
     report = get_object_or_404(reports_for(request.user), pk=report_id)
     editable(report, request.user)
-    return render(request, "reportbuilder/designer.html", {"report": report})
+    return render(request, "reportbuilder/designer.html", {"report": report,
+                  "publication_url": report_payload(report, request.user)["publication_url"]})
 
 
 @login_required
