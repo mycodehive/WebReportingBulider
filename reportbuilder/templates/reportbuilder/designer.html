@@ -1,6 +1,7 @@
 {% extends 'reportbuilder/base.html' %}
 {% load static %}
 {% block title %}{{ report.name }} · 레포트 디자이너{% endblock %}
+{% block head %}<link rel="stylesheet" href="{% static 'reportbuilder/magnetic.css' %}">{% endblock %}
 {% block content %}
 <div id="designer" data-report-id="{{ report.id }}" data-revision="{{ report.revision }}">
   <div class="page-heading designer-heading"><div><div class="eyebrow">REPORT DESIGNER</div><h1>레포트 디자이너</h1><p class="muted">데이터를 연결하고, 필드를 끌어 원하는 보고서를 만드세요.</p></div><a class="button button-secondary" href="/reports/">라이브러리</a></div>
@@ -27,7 +28,8 @@
     </aside>
     <section class="canvas-region" aria-label="보고서 캔버스">
       <div class="canvas-controls"><div class="toolbar"><button id="prev-page" class="icon-button" aria-label="이전 페이지">‹</button><span id="page-label">페이지 1 / 1</span><button id="next-page" class="icon-button" aria-label="다음 페이지">›</button></div><div class="toolbar"><button id="add-page" class="text-button">+ 페이지</button><button id="copy-page" class="text-button">복사</button><button id="delete-page" class="text-button danger-text">삭제</button><select id="zoom" class="input zoom-select" aria-label="캔버스 확대"><option value="0.55">55%</option><option value="0.65" selected>65%</option><option value="0.8">80%</option><option value="1">100%</option><option value="1.25">125%</option></select></div></div>
-      <div id="canvas-scroll" class="canvas-scroll"><div id="canvas-holder" class="canvas-holder"><div id="report-canvas" class="report-canvas" tabindex="0" aria-label="필드를 끌어놓을 보고서 페이지"></div></div></div><div class="canvas-footnote">위치와 크기: mm · 키보드 화살표: 1mm 이동 · Delete: 선택 요소 삭제</div>
+      <div class="magnetic-controls"><button type="button" id="magnetic-toggle" class="button button-secondary" aria-pressed="true" title="요소의 가장자리와 중심에 자동 정렬 · Alt를 누르면 잠시 해제">자석 정렬</button></div>
+      <div id="canvas-scroll" class="canvas-scroll"><div id="canvas-holder" class="canvas-holder"><div id="report-canvas" class="report-canvas" tabindex="0" aria-label="필드를 끌어놓을 보고서 페이지"></div></div></div><div class="canvas-footnote">위치와 크기: mm · 자석 정렬: 가장자리 / 중심 · Alt: 자석 해제 · 화살표: 1mm 이동 · Delete: 선택 요소 삭제</div>
     </section>
     <aside class="designer-panel properties-panel"><div class="panel-header"><h2>속성</h2><span id="selection-type" class="badge">페이지</span></div><div id="properties" class="panel-body"></div><div class="panel-section layers-section"><h2>레이어</h2><div id="layers"></div></div></aside>
   </div>
@@ -38,4 +40,4 @@
 </div>
 {{ report.definition|json_script:'report-definition' }}
 {% endblock %}
-{% block scripts %}<script src="{% static 'reportbuilder/designer.js' %}" defer></script>{% endblock %}
+{% block scripts %}<script src="{% static 'reportbuilder/magnetic.js' %}" defer></script><script src="{% static 'reportbuilder/designer.js' %}" defer></script>{% endblock %}

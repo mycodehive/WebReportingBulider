@@ -1,0 +1,7 @@
+.alignment-guide{position:absolute;pointer-events:none;z-index:10;border-color:#db2777;border-style:dashed;border-width:0}
+.alignment-guide-x{top:0;bottom:0;border-left-width:var(--guide-width,1px)}
+.alignment-guide-y{left:0;right:0;border-top-width:var(--guide-width,1px)}
+#magnetic-toggle[aria-pressed=true]{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+.canvas-controls{flex-wrap:wrap;gap:8px}
+.magnetic-controls{display:flex;justify-content:flex-end;padding:6px 12px;border-bottom:1px solid var(--border);background:var(--surface-raised)}
+.magnetic-controls .button{min-height:30px;padding:5px 10px;font-size:11px}
