@@ -55,3 +55,9 @@ html[data-sidebar="collapsed"] .company-brand-logo{max-width:40px;object-positio
 .menu-order-input{max-width:140px}
 .menu-management-note{margin:18px 0 0;font-size:12px}
 @media(max-width:600px){.menu-management-form .table th:first-child,.menu-management-form .table td:first-child{display:none}.menu-order-input{max-width:100px}}
+
+/* Keep reply edit and delete actions together with clear destructive-action styling. */
+.reply-form-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:18px;padding-top:16px;border-top:1px solid #edf0f5}
+.reply-delete-form{display:flex;margin:0 0 0 auto}
+.reply-delete-form .button{min-height:36px}
+@media(max-width:480px){.reply-form-actions{gap:8px}.reply-delete-form{margin-left:auto}}
