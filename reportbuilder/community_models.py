@@ -138,7 +138,7 @@ class WorkspaceMenu(models.Model):
     def clean(self):
         value = self.url.strip()
         parsed = urlsplit(value)
-        if not value.startswith("/") or value.startswith("//") or parsed.scheme or parsed.netloc or "\\\\" in value:
+        if not value.startswith("/") or value.startswith("//") or parsed.scheme or parsed.netloc or any(ord(char) == 92 for char in value):
             from django.core.exceptions import ValidationError
             raise ValidationError({"url": "주소는 사이트 내부 경로(/로 시작)만 등록할 수 있습니다."})
         self.url = value
