@@ -9,7 +9,7 @@ from django.shortcuts import redirect, render
 from django.utils.text import slugify
 from django.views.decorators.http import require_http_methods
 
-from .community_models import default_menu_items
+from .community_models import MenuConfiguration, default_menu_items
 from .models import WorkspaceMenu
 
 
@@ -76,12 +76,17 @@ def menu_management(request):
                     orders = request.POST.getlist("orders")
                     if not (len(keys) == len(labels) == len(orders) == len(default_menu_items())):
                         raise ValidationError("메뉴 항목이 올바르지 않습니다.")
+                    submitted = []
                     for key, label, order in zip(keys, labels, orders):
                         menu = WorkspaceMenu.objects.get(key=key)
                         menu.label = label.strip()
                         menu.order = int(order)
                         menu.full_clean()
                         menu.save()
+                        submitted.append({"key": key, "label": menu.label, "order": menu.order})
+                    legacy_config, _ = MenuConfiguration.objects.get_or_create(pk=1)
+                    legacy_config.items = submitted
+                    legacy_config.save(update_fields=["items", "updated_at"])
                 else:
                     active_ids = set(request.POST.getlist("active_ids"))
                     staff_ids = set(request.POST.getlist("staff_ids"))
