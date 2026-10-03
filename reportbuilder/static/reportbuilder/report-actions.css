@@ -1,0 +1,10 @@
+.viewer-actions{display:flex;flex-wrap:wrap;align-items:center;gap:16px}
+.viewer-actions .button{min-height:40px;min-width:64px;padding:10px 16px;font-size:13px}
+.viewer-actions #run-status{flex:1;min-width:0;overflow-wrap:anywhere}
+.viewer-exports{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+#publication-link{flex-shrink:0;min-height:36px}
+@media(max-width:700px){
+ .viewer-actions #run-status{flex-basis:100%;order:2}
+ .viewer-exports{flex-basis:100%;gap:10px}
+ .viewer-exports .button{flex:1}
+}

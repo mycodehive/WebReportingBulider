@@ -115,6 +115,9 @@ test('designer interactions produce portable, backend-valid and executable repor
 
   window.eval(script);
   await waitFor(() => byId('connection-select').options.length === 2, 'available connections loaded');
+  assert.equal(byId('zoom').value, '1', 'canvas starts at 100%');
+  assert.equal(byId('report-canvas').style.transform, 'scale(1)');
+  assert.equal(byId('publication-link').hidden, true, 'unpublished reports have no shortcut');
   assert.equal(document.querySelectorAll('.canvas-element').length, 1, 'initial title renders');
   change(byId('connection-select'), fixture.connections.connections[0].id);
   await waitFor(() => byId('object-select').options.length === 2, 'real connector schema loaded');
@@ -180,6 +183,8 @@ test('designer interactions produce portable, backend-valid and executable repor
   byId('publish').click();
   await waitFor(() => requests.some(request => request.url.endsWith('/publish/')), 'report publication');
   assert.equal(requests.find(request => request.url.endsWith('/publish/')).body.parameters.min_salary, 100.25);
+  await waitFor(() => !byId('publication-link').hidden, 'persistent publication shortcut shown');
+  assert.equal(byId('publication-link').getAttribute('href'), '/published/example/');
   assert.deepEqual(errors, [], 'no unhandled DOM/script errors');
 
   const validation = pythonFixture('validate', { definitions, bindings: savedBindings });

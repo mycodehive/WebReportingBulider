@@ -120,6 +120,23 @@ def test_published_revision_is_immutable(author_client, data_report):
     assert "New draft title" in response.json()["html"]
 
 
+def test_publication_link_is_stable_and_available_without_republishing(author_client, data_report):
+    report, _ = data_report
+    endpoint = f"/api/reports/{report.pk}/"
+    assert author_client.get(endpoint).json()["publication_url"] is None
+    url = post(author_client, endpoint + "publish/").json()["publication_url"]
+    assert author_client.get(endpoint).json()["publication_url"] == url
+    page = author_client.get(f"/reports/{report.pk}/design/")
+    assert page.context["publication_url"] == url
+    assert f'href="{url}"'.encode() in page.content
+    assert b'value="1" selected>100%' in page.content
+    assert post(author_client, endpoint + "publish/").json()["publication_url"] == url
+    post(author_client, endpoint + "publish/", {"enabled": False})
+    assert author_client.get(endpoint).json()["publication_url"] is None
+    assert author_client.get(f"/reports/{report.pk}/design/").context["publication_url"] is None
+    assert post(author_client, endpoint + "publish/").json()["publication_url"] == url
+
+
 def test_project_export_import_is_unbound_and_can_rebind(author_client, admin, data_report, settings, tmp_path):
     report, connection = data_report
     package = author_client.get(f"/reports/{report.pk}/export/project/")

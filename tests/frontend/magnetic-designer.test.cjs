@@ -24,7 +24,7 @@ async function designer(t,flow=false){
  const pointer=(target,type,x,y,extra={})=>target.dispatchEvent(new w.MouseEvent(type,{bubbles:true,button:0,clientX:x,clientY:y,...extra}));
  const moving=()=>d.querySelector('[data-element-id="moving"]');
  const px=96/25.4;
- function drag(altKey=false){pointer(moving(),'pointerdown',0,0);pointer(d,'pointermove',24*px*.65,0,{altKey});}
+ function drag(altKey=false){pointer(moving(),'pointerdown',0,0);pointer(d,'pointermove',24*px,0,{altKey});}
  return {w,d,pointer,moving,px,drag};
 }
 test('drag snaps, draws guides, saves position and supports undo/redo',async t=>{
