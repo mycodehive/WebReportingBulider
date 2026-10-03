@@ -1,7 +1,7 @@
 from django.db import OperationalError, ProgrammingError
 from django.urls import reverse
 
-from .models import CompanyBranding, MenuConfiguration, WorkspaceMenu
+from .models import CompanyBranding, WorkspaceMenu
 
 
 def company_branding(request):
