@@ -293,15 +293,15 @@ def test_board_reply_setting_disables_reply_creation_and_preserves_existing(clie
     existing = BoardReply.objects.create(post=post, author=users['operator'], body='<p>기존 답변</p>')
     client.force_login(users['admin'])
     settings_page = client.get(url('board_settings', board))
-    assert b'답변 / 댓글 허용' in settings_page.content
+    assert '답변 / 댓글 허용' in settings_page.content.decode()
 
     board.allow_replies = False
     board.save(update_fields=['allow_replies'])
     client.force_login(users['alice'])
     detail_page = client.get(url('board_post', board, post))
     assert detail_page.status_code == 200
-    assert b'이 게시판은 답변 / 댓글 작성이 비활성화되어 있습니다.' in detail_page.content
-    assert b'기존 답변' in detail_page.content
+    assert '이 게시판은 답변 / 댓글 작성이 비활성화되어 있습니다.' in detail_page.content.decode()
+    assert '기존 답변' in detail_page.content.decode()
     assert client.post(url('board_post', board, post), {'body': '<p>새 답변</p>'}).status_code == 403
     assert BoardReply.objects.filter(pk=existing.pk).exists()
     assert not BoardReply.objects.filter(body__contains='새 답변').exists()
@@ -313,4 +313,4 @@ def test_board_filter_reset_is_button_styled_and_badges_removed(client, communit
     response = client.get(url('board_list', board))
     assert b'class="badge"' not in response.content
     assert b'class="button button-secondary" href="' in response.content
-    assert b'초기화</a>' in response.content
+    assert '초기화</a>'.encode() in response.content
