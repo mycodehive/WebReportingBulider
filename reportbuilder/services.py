@@ -26,7 +26,7 @@ def reports_for(user):
 def connections_for(user):
     if user.is_staff:
         return Connection.objects.all()
-    return Connection.objects.filter(Q(owner=user) | Q(groups__in=user.groups.all())).distinct()
+    return Connection.objects.filter(owner=user)
 
 
 def editable(report, user):
