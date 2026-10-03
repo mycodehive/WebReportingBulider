@@ -2,4 +2,4 @@
 {% load static %}
 {% block title %}{{ title }} | WebReporting Builder{% endblock %}
 {% block branding %}<h1 id="site-name"><a href="{% url 'admin:index' %}">WebReporting Builder <span>관리 콘솔</span></a></h1>{% endblock %}
-{% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static 'reportbuilder/admin.css' %}">{% endblock %}
+{% block responsive %}{{ block.super }}<link rel="stylesheet" href="{% static 'reportbuilder/admin.css' %}?v=20261004">{% endblock %}
