@@ -7,7 +7,8 @@ from django.urls import reverse
 from PIL import Image
 
 from reportbuilder.community_forms import BoardForm, clean_html
-from reportbuilder.models import Board, BoardCategory, BoardPost, BoardReply, BoardStatus, CompanyBranding, MenuConfiguration\nfrom reportbuilder.community_models import default_menu_items
+from reportbuilder.models import Board, BoardCategory, BoardPost, BoardReply, BoardStatus, CompanyBranding, MenuConfiguration
+from reportbuilder.community_models import default_menu_items
 
 pytestmark = pytest.mark.django_db
 
@@ -223,7 +224,7 @@ def test_board_user_search_matches_username_and_email_and_checks_permissions(cli
     assert [item['id'] for item in response.json()['results']] == [str(users['alice'].pk)]
     response = client.get(reverse('board_user_search'), {'q': 'alice@example.com'})
     assert response.json()['results'][0]['email'] == 'alice@example.com'
-    assert client.get(reverse('board_user_search'), {'q': 'in'}).json()['results'] == []
+    assert client.get(reverse('board_user_search'), {'q': 'a'}).json()['results'] == []
     assert str(inactive.pk) not in [item['id'] for item in client.get(
         reverse('board_user_search'), {'q': 'inactive-match'}).json()['results']]
 
