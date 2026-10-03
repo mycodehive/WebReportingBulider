@@ -650,7 +650,7 @@ def report_export(request, report_id, format):
         execution = get_object_or_404(Execution, pk=request.GET["execution"], report=report, user=request.user, status="SUCCEEDED")
         if execution.created_at < timezone.now() - timedelta(hours=24):
             raise PermissionDenied("결과 보존 기한이 지났습니다. 다시 실행해 주세요.")
-        if execution.policy_fingerprint != policy_fingerprint(request.user, report, execution.bindings_snapshot):
+        if execution.policy_fingerprint != policy_fingerprint(request.user, report, execution.bindings_snapshot, allow_shared=True):
             raise PermissionDenied("데이터 정책이 변경되었습니다. 다시 실행해 주세요.")
     else:
         execution, _ = execute_report(report, request.user, published=not (request.user.is_staff or report.owner_id == request.user.pk))
