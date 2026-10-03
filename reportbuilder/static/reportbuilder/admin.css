@@ -113,11 +113,11 @@ a.addlink::before,a.addlink::after{content:none}
 #changelist .changelist-form-container{background:var(--adm-surface);border-radius:12px;overflow:hidden}
 #changelist #toolbar{padding:16px;background:var(--adm-surface);border:0}
 #toolbar form>div{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-#toolbar input[type=submit]{border:0;background:var(--adm-accent);color:var(--primary-fg)}
+#changelist #toolbar form input[type=submit]{border:0;background:var(--adm-accent);color:var(--primary-fg)}
 #toolbar #searchbar{box-sizing:border-box;min-height:40px;flex:1;max-width:420px;width:100%}
 #changelist .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:14px 16px;background:var(--adm-raised);border:0;color:var(--adm-muted)}
 #changelist .actions label{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px}
-#changelist .actions select{height:auto;min-height:38px;max-width:100%;padding:8px}
+#changelist .actions select{border:0;background:var(--adm-accent-soft);height:auto;min-height:38px;max-width:100%;padding:8px}
 #changelist .actions .button{height:auto;min-height:38px;padding:8px 14px;background:var(--adm-accent);color:var(--primary-fg);border:0}
 #changelist .actions span.all,#changelist .actions span.action-counter,#changelist .actions span.clear,#changelist .actions span.question{margin:0;font-size:12px}
 #changelist-form .results{overflow-x:auto;border:0;border-radius:0}
@@ -125,6 +125,7 @@ a.addlink::before,a.addlink::after{content:none}
 #changelist table thead th{background:var(--adm-raised);color:var(--adm-muted);border:0}
 #changelist table thead th .text a,#changelist table thead th .text span{padding:13px 12px;color:var(--adm-muted)}
 #changelist table tbody th,#changelist table tbody td{padding:13px 12px;background:transparent;color:var(--adm-text);border:0;vertical-align:middle}
+#changelist table tbody th{white-space:nowrap}
 #changelist tbody tr{background:var(--adm-surface)}
 #changelist tbody tr:nth-child(even){background:var(--adm-raised)}
 #changelist tbody tr.selected{background:var(--adm-accent-soft)}

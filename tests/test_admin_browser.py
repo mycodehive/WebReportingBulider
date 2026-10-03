@@ -7,11 +7,14 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.contrib.staticfiles import finders
 
+from reportbuilder.models import Connection
+
 
 @pytest.mark.django_db
 def test_admin_themes_and_responsive_layout(client):
     playwright = pytest.importorskip("playwright.sync_api")
     user = get_user_model().objects.create_superuser("admin-layout", "layout@example.test", "test-password")
+    Connection.objects.create(name="관리자 목록 레이아웃 확인", kind="postgresql", owner=user)
     client.force_login(user)
     paths = ["/admin/", "/admin/reportbuilder/connection/", "/admin/reportbuilder/asset/add/",
              f"/admin/auth/user/{user.pk}/change/", "/admin/jsi18n/"]
@@ -84,6 +87,8 @@ def test_admin_themes_and_responsive_layout(client):
                             page.locator("#id_name").fill("Layout check")
                             playwright.expect(page.locator("#id_name")).to_have_value("Layout check")
                     page.goto("http://testserver/admin/reportbuilder/connection/")
+                    playwright.expect(page.locator("#result_list")).to_contain_text("관리자 목록 레이아웃 확인")
+                    assert page.locator("#result_list tbody th").evaluate("e => getComputedStyle(e).whiteSpace") == "nowrap"
                     add = page.locator(".object-tools a.addlink")
                     assert add.evaluate("e => getComputedStyle(e).borderRadius") == "0px"
                     assert add.evaluate("e => getComputedStyle(e).backgroundImage") == "none"
