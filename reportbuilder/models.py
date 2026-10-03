@@ -73,6 +73,7 @@ class Project(Owned):
 
 
 class Report(Owned):
+    cover = models.ForeignKey('Asset', null=True, blank=True, on_delete=models.SET_NULL, related_name='cover_reports')
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="reports")
     definition = models.JSONField(default=dict)
     bindings = models.JSONField(default=list)
@@ -192,6 +193,7 @@ class GoogleOAuthApp(models.Model):
 
 
 class PublicShare(models.Model):
+    password_hash = models.CharField(max_length=128, blank=True)
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     report = models.ForeignKey(Report, on_delete=models.CASCADE, related_name='public_shares')
     revision = models.ForeignKey(Revision, on_delete=models.CASCADE)

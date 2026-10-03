@@ -4,6 +4,8 @@ from . import analytics_views
 
 urlpatterns = [
     path("reports/<uuid:report_id>/shares/", sharing.shares, name="report_shares"),
+    path("reports/<uuid:report_id>/cover/", views.report_cover, name="report_cover"),
+    path("api/reports/<uuid:report_id>/infographic-data/", views.infographic_data_api),
     path("shared/<str:token>/", sharing.public_report, name="public_report"),
     path("connections/google/oauth/", google_oauth.setup, name="google_oauth_setup"),
     path("connections/google/callback/", google_oauth.callback, name="google_oauth_callback"),

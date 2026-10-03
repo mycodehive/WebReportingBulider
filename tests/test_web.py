@@ -137,6 +137,51 @@ def test_publication_link_is_stable_and_available_without_republishing(author_cl
     assert post(author_client, endpoint + "publish/").json()["publication_url"] == url
 
 
+def test_report_cover_upload_replacement_removal_and_permissions(author_client, data_report):
+    report, _ = data_report
+    endpoint = f'/reports/{report.pk}/cover/'
+    def upload(color):
+        stream = io.BytesIO()
+        Image.new('RGB', (80, 40), color).save(stream, format='JPEG')
+        return ContentFile(stream.getvalue(), name='cover.jpg')
+    assert author_client.post(endpoint, {'cover':upload('blue')}).status_code == 302
+    report.refresh_from_db()
+    first = report.cover_id
+    assert report.cover.mime == 'image/png'
+    assert f'/assets/{first}/'.encode() in author_client.get('/reports/').content
+    assert author_client.post(endpoint, {'cover':ContentFile(b'invalid', name='bad.png')}).status_code == 302
+    report.refresh_from_db()
+    assert report.cover_id == first
+    author_client.post(endpoint, {'cover':upload('red')})
+    report.refresh_from_db()
+    assert report.cover_id != first
+    other = Client()
+    other.force_login(get_user_model().objects.create_user(username='cover-stranger'))
+    assert other.post(endpoint, {'remove':'yes'}).status_code == 404
+    strict = Client(enforce_csrf_checks=True)
+    strict.force_login(report.owner)
+    assert strict.post(endpoint, {'remove':'yes'}).status_code == 403
+    author_client.post(endpoint, {'remove':'yes'})
+    report.refresh_from_db()
+    assert report.cover_id is None
+
+
+def test_infographic_data_uses_mapped_values_and_enforces_edit_access(author_client, data_report):
+    report, _ = data_report
+    endpoint = f'/api/reports/{report.pk}/infographic-data/'
+    data = {'dataset_id':'sales','label_id':'department','value_id':'amount'}
+    response = post(author_client, endpoint, data)
+    assert response.status_code == 200, response.content
+    assert response.json()['points'] == [{'label':'A','value':300}]
+    assert 'no-store' in response['Cache-Control']
+    assert post(author_client, endpoint, {**data,'aggregation':'avg'}).json()['points'] == [{'label':'A','value':150}]
+    assert post(author_client, endpoint, {**data,'value_id':'customer'}).status_code == 400
+    stranger = get_user_model().objects.create_user(username='chart-stranger')
+    other = Client()
+    other.force_login(stranger)
+    assert post(other, endpoint, data).status_code == 404
+
+
 def test_project_export_import_is_unbound_and_can_rebind(author_client, admin, data_report, settings, tmp_path):
     report, connection = data_report
     package = author_client.get(f"/reports/{report.pk}/export/project/")

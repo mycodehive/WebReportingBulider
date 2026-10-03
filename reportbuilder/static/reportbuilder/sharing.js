@@ -11,7 +11,7 @@
     for (const row of rows) {
       const item = document.createElement('div'); item.className = 'card'; item.style.marginBottom = '8px';
       const text = document.createElement('p');
-      text.textContent = `${row.status} · ${formatTime(row.starts_at) || '즉시'} ~ ${formatTime(row.ends_at) || '기간 제한 없음'} (한국 시간)`;
+      text.textContent = `${row.status} · ${row.password_protected ? '비밀번호 보호' : '비밀번호 없음'} · ${formatTime(row.starts_at) || '즉시'} ~ ${formatTime(row.ends_at) || '기간 제한 없음'} (한국 시간)`;
       item.append(text);
       if (!row.revoked) {
         const button = document.createElement('button'); button.type = 'button'; button.className = 'button button-danger'; button.textContent = '공유 해제';
@@ -48,14 +48,15 @@
     catch (_) { if (current === generation) el('share-status').textContent = '공유 정보를 불러오지 못했습니다. 창을 다시 열어 주세요.'; }
   });
   el('share-close').addEventListener('click', () => dialog.close());
-  dialog.addEventListener('close', () => { ++generation; el('share-url').value = ''; if (opener) opener.focus(); });
+  dialog.addEventListener('close', () => { ++generation; el('share-url').value = ''; el('share-password').value = ''; if (opener) opener.focus(); });
   el('share-period').addEventListener('change', () => { const range = el('share-period').value === 'range'; el('share-dates').hidden = !range; el('share-end').required = range; });
   el('share-form').addEventListener('submit', async event => {
     event.preventDefault(); const current = generation; el('share-create').disabled = true;
     const range = el('share-period').value === 'range';
     const kst = id => range && el(id).value ? el(id).value + ':00+09:00' : null;
     try {
-      const data = await api({starts_at:kst('share-start'), ends_at:kst('share-end'), parameters:Object.fromEntries(new FormData(event.currentTarget))}, 'POST');
+      const data = await api({starts_at:kst('share-start'), ends_at:kst('share-end'), password:el('share-password').value, parameters:Object.fromEntries(new FormData(event.currentTarget))}, 'POST');
+      el('share-password').value = '';
       if (current !== generation) return;
       el('share-url').value = data.url; el('share-result').hidden = false; el('share-status').textContent = '공유 링크를 생성했습니다.';
       await refresh(current);
