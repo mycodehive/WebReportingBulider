@@ -61,3 +61,7 @@ html[data-sidebar="collapsed"] .company-brand-logo{max-width:40px;object-positio
 .reply-delete-form{display:flex;margin:0 0 0 auto}
 .reply-delete-form .button{min-height:36px}
 @media(max-width:480px){.reply-form-actions{gap:8px}.reply-delete-form{margin-left:auto}}
+
+/* Keep the two-line brand label compact and inside the brand-mark height. */
+.brand-copy{display:flex;flex-direction:column;justify-content:center;gap:0;height:34px;min-height:34px;line-height:1;white-space:nowrap}
+.brand-copy small{display:block;font-size:10px;line-height:1;letter-spacing:1px;margin-top:2px}
