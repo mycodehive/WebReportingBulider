@@ -69,3 +69,19 @@ html[data-sidebar="collapsed"] .company-brand-logo{max-width:40px;object-positio
 /* Dashboard recent reports: align the heading actions and fill cover thumbnails. */
 .recent-reports-heading{margin-bottom:16px}
 .report-thumbnail img{display:block;width:100%;height:100%;object-fit:cover;border-radius:inherit}
+
+/* Account, versioned manual, and workspace-menu screens. */
+.login-card form .signup-link{display:flex;width:100%;margin-top:9px}
+.signup-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:8px}
+.signup-actions .button-primary{flex:1}
+.field-error{color:#be123c;font-size:11px;font-weight:600}
+.manual-heading{justify-content:flex-start;flex-wrap:wrap;gap:14px}
+.manual-heading h1{margin:0}
+.manual-version{white-space:nowrap}
+.menu-url-input{min-width:190px}
+.menu-create-card{margin-top:20px}
+.menu-create-form{display:grid;grid-template-columns:2fr 3fr 1fr auto auto auto;align-items:end;gap:12px}
+.menu-create-form .field{margin-bottom:0}
+.menu-checkbox{display:flex;align-items:center;gap:6px;min-height:36px;color:var(--muted);font-size:11px;font-weight:600;white-space:nowrap}
+.menu-checkbox input{accent-color:var(--accent)}
+@media(max-width:900px){.menu-create-form{grid-template-columns:repeat(2,minmax(0,1fr))}.menu-create-form .button{grid-column:1/-1}}
