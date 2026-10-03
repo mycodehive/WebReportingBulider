@@ -2,19 +2,34 @@
 {% block title %}메뉴관리{% endblock %}
 {% block content %}
 <section class="community-page">
-  <div class="community-heading"><div><span class="badge">워크스페이스 설정</span><h1>메뉴관리</h1><p class="muted">좌측 메뉴에 표시되는 제목과 순서를 설정합니다. 작은 순서값일수록 위에 표시됩니다.</p></div></div>
+  <div class="community-heading"><div><span class="badge">워크스페이스 설정</span><h1>메뉴관리</h1><p class="muted">좌측 메뉴를 추가·수정·삭제하고 표시 순서와 접근 대상을 관리합니다.</p></div></div>
   <div class="card community-card">
     <form method="post" class="menu-management-form">
       {% csrf_token %}
-      <div class="table-wrap"><table class="table"><thead><tr><th>메뉴</th><th>표시 제목</th><th>순서</th></tr></thead><tbody>
+      <div class="table-wrap"><table class="table"><thead><tr><th>메뉴명</th><th>내부 주소</th><th>순서</th><th>관리자 전용</th><th>사용</th><th>삭제</th></tr></thead><tbody>
       {% for item in items %}<tr>
-        <td>{{ item.label }}</td>
-        <td><input class="input" type="text" name="labels" value="{{ item.label }}" maxlength="40" required aria-label="{{ item.label }} 표시 제목"><input type="hidden" name="keys" value="{{ item.key }}"></td>
-        <td><input class="input menu-order-input" type="number" name="orders" value="{{ item.order }}" required aria-label="{{ item.label }} 순서"></td>
-      </tr>{% endfor %}
+        <td><input class="input" type="text" name="label_{{ item.pk }}" value="{{ item.label }}" maxlength="40" required aria-label="{{ item.label }} 메뉴명"></td>
+        <td><input class="input menu-url-input" type="text" name="url_{{ item.pk }}" value="{{ item.url }}" maxlength="255" required aria-label="{{ item.label }} 내부 주소"></td>
+        <td><input class="input menu-order-input" type="number" name="order_{{ item.pk }}" value="{{ item.order }}" required aria-label="{{ item.label }} 순서"></td>
+        <td><input type="checkbox" name="staff_ids" value="{{ item.pk }}" {% if item.staff_only %}checked{% endif %} aria-label="{{ item.label }} 관리자 전용"></td>
+        <td><input type="checkbox" name="active_ids" value="{{ item.pk }}" {% if item.active %}checked{% endif %} aria-label="{{ item.label }} 사용"></td>
+        <td><input type="checkbox" name="delete_ids" value="{{ item.pk }}" aria-label="{{ item.label }} 삭제 선택"></td>
+      </tr>{% empty %}<tr><td colspan="6" class="muted">등록된 메뉴가 없습니다.</td></tr>{% endfor %}
       </tbody></table></div>
-      <p class="muted menu-management-note">메뉴 주소는 고정되어 있어 제목과 순서만 변경할 수 있습니다. 관리 설정과 메뉴관리 항목은 관리자에게만 표시됩니다.</p>
-      <div class="community-actions"><button class="button button-primary" type="submit">변경 저장</button><a class="button button-secondary" href="/">취소</a></div>
+      <p class="muted menu-management-note">주소는 보안을 위해 사이트 내부 경로(/로 시작)만 허용합니다. 작은 순서값일수록 위에 표시됩니다.</p>
+      <div class="community-actions"><button class="button button-primary" type="submit" name="action" value="save">변경 저장</button><button class="button button-danger" type="submit" name="action" value="delete_selected" onclick="return confirm('선택한 메뉴를 삭제할까요?')">선택 메뉴 삭제</button><a class="button button-secondary" href="/">취소</a></div>
+    </form>
+  </div>
+  <div class="card community-card menu-create-card">
+    <h2>메뉴 추가</h2>
+    <form method="post" class="menu-create-form">
+      {% csrf_token %}<input type="hidden" name="action" value="create">
+      <label class="field">메뉴명<input class="input" name="new_label" maxlength="40" required></label>
+      <label class="field">내부 주소<input class="input" name="new_url" maxlength="255" placeholder="/reports/" required></label>
+      <label class="field">순서<input class="input" type="number" name="new_order" value="100" required></label>
+      <label class="menu-checkbox"><input type="checkbox" name="new_staff_only"> 관리자 전용</label>
+      <label class="menu-checkbox"><input type="checkbox" name="new_active" checked> 사용</label>
+      <button class="button button-primary" type="submit">메뉴 추가</button>
     </form>
   </div>
 </section>
