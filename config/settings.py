@@ -19,8 +19,8 @@ REPORT_SECRET_KEY = os.environ.get(
 )
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,testserver").split(",")
 INSTALLED_APPS = [
-    "django.contrib.admin", "django.contrib.auth", "django.contrib.contenttypes",
-    "django.contrib.sessions", "django.contrib.messages", "django.contrib.staticfiles", "reportbuilder",
+    "django.contrib.auth", "django.contrib.contenttypes", "reportbuilder", "django.contrib.admin",
+    "django.contrib.sessions", "django.contrib.messages", "django.contrib.staticfiles",
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware", "whitenoise.middleware.WhiteNoiseMiddleware",
@@ -30,7 +30,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware", "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 ROOT_URLCONF = "config.urls"
-TEMPLATES = [{"BACKEND": "django.template.backends.django.DjangoTemplates", "DIRS": [BASE_DIR / "templates"], "APP_DIRS": True,
+TEMPLATES = [{"BACKEND": "django.template.backends.django.DjangoTemplates", "DIRS": [], "APP_DIRS": True,
               "OPTIONS": {"context_processors": [
                   "django.template.context_processors.request", "django.contrib.auth.context_processors.auth",
                   "django.contrib.messages.context_processors.messages", "reportbuilder.context_processors.company_branding", "reportbuilder.context_processors.workspace_navigation"]}}]
