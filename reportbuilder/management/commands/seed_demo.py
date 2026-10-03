@@ -59,16 +59,21 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--username")
+        parser.add_argument("--user-id", help="데모를 생성할 특정 활성 사용자 ID")
         parser.add_argument("--reset", action="store_true", help="기존 매출 예제만 정리하고 다시 생성")
 
     @transaction.atomic
     def handle(self, *args, **options):
-        users = get_user_model().objects.filter(is_staff=True, is_active=True)
-        if options["username"]:
-            users = users.filter(username=options["username"])
+        users = get_user_model().objects.filter(is_active=True)
+        if options["user_id"]:
+            users = users.filter(pk=options["user_id"])
+        else:
+            users = users.filter(is_staff=True)
+            if options["username"]:
+                users = users.filter(username=options["username"])
         user = users.first()
         if not user:
-            raise CommandError("먼저 createsuperuser로 관리자 계정을 생성하세요.")
+            raise CommandError("데모를 생성할 활성 사용자를 찾을 수 없습니다.")
         marker, _ = DemoSeed.objects.get_or_create(owner=user)
         marker = DemoSeed.objects.select_for_update().get(pk=marker.pk)
         existing = Report.objects.filter(owner=user, name="매출 현황 예제")
