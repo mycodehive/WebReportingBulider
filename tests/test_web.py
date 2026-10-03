@@ -438,3 +438,20 @@ def test_staff_downgrade_revokes_draft_snapshot_even_with_remaining_viewer_acces
     # Permissions now allow execution of the publication, but not the old privileged draft.
     published = post(author_client, f"/api/reports/{report.pk}/execute/")
     assert published.status_code == 200 and "Staff-only unfinished draft" not in published.json()["html"]
+
+
+def test_report_can_be_deleted_from_library_by_owner(author_client, data_report):
+    report, _ = data_report
+    page = author_client.get('/reports/')
+    assert f'action="/reports/{report.pk}/delete/"'.encode() in page.content
+    response = author_client.post(f'/reports/{report.pk}/delete/')
+    assert response.status_code == 302
+    assert not Report.objects.filter(pk=report.pk).exists()
+
+
+def test_report_delete_requires_owner(author_client, data_report):
+    report, _ = data_report
+    other = Client()
+    other.force_login(get_user_model().objects.create_user(username='delete-stranger'))
+    assert other.post(f'/reports/{report.pk}/delete/').status_code == 404
+    assert Report.objects.filter(pk=report.pk).exists()

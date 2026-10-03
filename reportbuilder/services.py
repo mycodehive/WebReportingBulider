@@ -38,9 +38,14 @@ def resolve_connections(user, bindings):
     found = {}
     for binding in bindings:
         try:
-            conn = connections_for(user).get(pk=binding["connection_id"])
-        except (Connection.DoesNotExist, KeyError, ValueError):
-            raise PermissionDenied("연결 접근 권한이 없거나 매핑이 누락되었습니다.") from None
+            connection_id = binding["connection_id"]
+            conn = connections_for(user).get(pk=connection_id)
+        except KeyError:
+            raise DataError("MAPPING_REQUIRED", "데이터셋의 데이터 연결 매핑이 없습니다. 보고서의 데이터 연결을 다시 선택하세요.") from None
+        except (Connection.DoesNotExist, ValueError):
+            raise PermissionDenied(
+                "데이터 연결에 접근할 수 없습니다. 연결 소유자 또는 공유 그룹 권한과 보고서의 데이터셋 연결 매핑을 확인하세요."
+            ) from None
         found[str(conn.pk)] = conn
     return found
 

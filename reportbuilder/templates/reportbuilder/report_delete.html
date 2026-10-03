@@ -1,0 +1,15 @@
+{% extends 'reportbuilder/base.html' %}
+{% block title %}보고서 삭제{% endblock %}
+{% block content %}
+<section class="community-page">
+  <div class="community-heading"><div><a href="{% url 'library' %}">← 보고서 라이브러리</a><h1>보고서 삭제</h1></div></div>
+  <div class="card community-card">
+    <p><strong>{{ report.name }}</strong> 보고서를 삭제할까요?</p>
+    <p class="muted">보고서 버전, 게시 설정, 실행 기록도 함께 삭제됩니다. 이 작업은 되돌릴 수 없습니다.</p>
+    <form method="post">{% csrf_token %}
+      <button class="button button-primary" type="submit">보고서 삭제</button>
+      <a class="button button-secondary" href="{% url 'library' %}">취소</a>
+    </form>
+  </div>
+</section>
+{% endblock %}

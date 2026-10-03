@@ -1,5 +1,7 @@
 import uuid
 
+from django.utils.text import slugify
+
 from django.conf import settings
 from django.core.validators import RegexValidator
 from django.db import models
@@ -15,6 +17,7 @@ class Board(models.Model):
     TYPES = [('list', '리스트형'), ('card', '카드형'), ('qa', '질문답변형 (1:1)')]
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField('게시판 이름', max_length=120)
+    slug = models.SlugField('URL slug', max_length=150, unique=True, blank=True)
     description = models.TextField('설명', blank=True, max_length=1000)
     kind = models.CharField('게시판 유형', max_length=8, choices=TYPES, default='list')
     active = models.BooleanField('사용', default=True)
@@ -25,6 +28,18 @@ class Board(models.Model):
 
     class Meta:
         ordering = ['name', 'id']
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base = slugify(self.name) or f'board-{self.pk.hex[:8]}'
+            candidate = base[:150]
+            suffix = 2
+            while Board.objects.exclude(pk=self.pk).filter(slug=candidate).exists():
+                ending = f'-{suffix}'
+                candidate = f'{base[:150 - len(ending)]}{ending}'
+                suffix += 1
+            self.slug = candidate
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name

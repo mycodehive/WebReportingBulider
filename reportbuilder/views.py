@@ -134,6 +134,19 @@ def ensure_demo(request):
 
 
 @login_required
+@require_http_methods(["GET", "POST"])
+def report_delete(request, report_id):
+    report = get_object_or_404(reports_for(request.user), pk=report_id)
+    editable(report, request.user)
+    if request.method == "POST":
+        audit(request.user, "report_delete", report.pk, name=report.name)
+        report.delete()
+        messages.success(request, "보고서를 삭제했습니다.")
+        return redirect("library")
+    return render(request, "reportbuilder/report_delete.html", {"report": report})
+
+
+@login_required
 @ensure_csrf_cookie
 def designer(request, report_id):
     report = get_object_or_404(reports_for(request.user), pk=report_id)

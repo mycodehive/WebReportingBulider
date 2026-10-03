@@ -31,13 +31,14 @@ class RichBodyMixin:
 class BoardForm(forms.ModelForm):
     class Meta:
         model = Board
-        fields = ['name', 'description', 'kind', 'active', 'allow_user_posts', 'managers', 'operators']
+        fields = ['name', 'slug', 'description', 'kind', 'active', 'allow_user_posts', 'managers', 'operators']
         widgets = {'description': forms.Textarea(attrs={'rows': 3}),
                    'managers': forms.SelectMultiple(attrs={'class': 'user-picker-select', 'data-user-select': 'true'}),
                    'operators': forms.SelectMultiple(attrs={'class': 'user-picker-select', 'data-user-select': 'true'})}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['slug'].help_text = '게시판 주소: /boards/{slug}. 비워 두면 게시판 이름으로 자동 생성됩니다.'
         for field in ['managers', 'operators']:
             if self.is_bound:
                 selected_ids = self.data.getlist(field) if hasattr(self.data, 'getlist') else self.data.get(field, [])

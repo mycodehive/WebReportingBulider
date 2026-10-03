@@ -130,6 +130,7 @@ def test_board_create_and_delete(client, community, kind):
     assert list(board.statuses.values_list('name', flat=True)) == ['접수', '보류', '완료']
     client.force_login(users['alice'])
     assert client.get(url('board_list', board)).status_code == 200
+    assert client.get(f'/boards/{board.slug}/').status_code == 200
     assert client.get(url('board_post_create', board)).status_code == 200
     board.allow_user_posts = False
     board.save()
@@ -224,6 +225,7 @@ def test_board_user_search_matches_username_and_email_and_checks_permissions(cli
     assert response.status_code == 200
     assert [item['id'] for item in response.json()['results']] == [str(users['alice'].pk)]
     assert client.get(reverse('board_user_search'), {'q': 'Alice Example'}).json()['results'][0]['id'] == str(users['alice'].pk)
+    assert client.get(reverse('board_user_search'), {'q': 'Example Alice'}).json()['results'][0]['id'] == str(users['alice'].pk)
     response = client.get(reverse('board_user_search'), {'q': 'alice@example.com'})
     assert response.json()['results'][0]['email'] == 'alice@example.com'
     assert client.get(reverse('board_user_search'), {'q': 'a'}).json()['results'] == []
@@ -260,3 +262,18 @@ def test_menu_management_saves_labels_and_order_and_requires_staff(client, commu
 
     client.force_login(users['alice'])
     assert client.get(reverse('menu_management')).status_code == 403
+
+
+def test_board_slug_can_be_set_and_is_used_for_public_route(client, community):
+    users, _, _, _ = community
+    client.force_login(users['admin'])
+    response = client.post(reverse('board_create'), {
+        'name': '공지 게시판', 'slug': 'announcements', 'kind': 'list',
+        'active': 'on', 'allow_user_posts': 'on',
+    })
+    assert response.status_code == 302
+    board = Board.objects.get(slug='announcements')
+    assert client.get('/boards/announcements/').status_code == 200
+    page = client.get(reverse('board_settings', args=[board.pk]))
+    assert page.status_code == 200
+    assert page.context['form']['slug'].value() == 'announcements'

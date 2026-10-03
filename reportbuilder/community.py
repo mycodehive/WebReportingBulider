@@ -115,6 +115,14 @@ def board_delete(request, board_id):
 @login_required
 @never_cache
 @require_http_methods(['GET'])
+def listing_by_slug(request, slug):
+    board = get_object_or_404(available_boards(request.user), slug=slug)
+    return listing(request, board.pk)
+
+
+@login_required
+@never_cache
+@require_http_methods(['GET'])
 def listing(request, board_id):
     board = get_board(request, board_id)
     posts = visible_posts(board, request.user)
@@ -253,11 +261,18 @@ def user_search(request):
         return JsonResponse({'results': []})
 
     User = get_user_model()
-    lookup = Q(username__icontains=query) | Q(email__icontains=query)
-    if User.USERNAME_FIELD != 'username':
-        lookup |= Q(**{f'{User.USERNAME_FIELD}__icontains': query})
-    if any(field.name == 'first_name' for field in User._meta.get_fields()):
-        lookup |= Q(first_name__icontains=query) | Q(last_name__icontains=query)
+    has_first_name = any(field.name == 'first_name' for field in User._meta.get_fields())
+    has_last_name = any(field.name == 'last_name' for field in User._meta.get_fields())
+    lookup = Q()
+    for term in query.split():
+        term_lookup = Q(username__icontains=term) | Q(email__icontains=term)
+        if User.USERNAME_FIELD != 'username':
+            term_lookup |= Q(**{f'{User.USERNAME_FIELD}__icontains': term})
+        if has_first_name:
+            term_lookup |= Q(first_name__icontains=term)
+        if has_last_name:
+            term_lookup |= Q(last_name__icontains=term)
+        lookup &= term_lookup
     if query.isdecimal():
         lookup |= Q(pk=int(query))
     users = User.objects.filter(is_active=True).filter(lookup).order_by('username').distinct()[:20]
