@@ -455,3 +455,17 @@ def test_report_delete_requires_owner(author_client, data_report):
     other.force_login(get_user_model().objects.create_user(username='delete-stranger'))
     assert other.post(f'/reports/{report.pk}/delete/').status_code == 404
     assert Report.objects.filter(pk=report.pk).exists()
+
+
+def test_published_report_can_be_deleted_from_library(author_client, data_report):
+    report, _ = data_report
+    published = post(author_client, f"/api/reports/{report.pk}/publish/")
+    assert published.status_code == 200, published.content
+    assert Publication.objects.filter(report=report).exists()
+    assert Revision.objects.filter(report=report).exists()
+
+    response = author_client.post(f"/reports/{report.pk}/delete/")
+    assert response.status_code == 302
+    assert not Report.objects.filter(pk=report.pk).exists()
+    assert not Publication.objects.filter(report=report).exists()
+    assert not Revision.objects.filter(report_id=report.pk).exists()

@@ -140,6 +140,7 @@ def report_delete(request, report_id):
     editable(report, request.user)
     if request.method == "POST":
         audit(request.user, "report_delete", report.pk, name=report.name)
+        Publication.objects.filter(report=report).delete()
         report.delete()
         messages.success(request, "보고서를 삭제했습니다.")
         return redirect("library")
