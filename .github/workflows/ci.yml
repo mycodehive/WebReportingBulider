@@ -2,6 +2,9 @@ name: Tests
 on: [push, pull_request]
 permissions:
   contents: read
+env:
+  # CI deliberately uses the development/test settings, never the application default.
+  DJANGO_DEBUG: "true"
 jobs:
   python-and-designer:
     runs-on: ubuntu-latest

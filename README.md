@@ -11,6 +11,7 @@ Python 3.12 이상과 [uv](https://docs.astral.sh/uv/getting-started/installatio
 ```bash
 git clone https://github.com/mycodehive/WebReportingBulider.git
 cd WebReportingBulider
+cp .env.example .env  # PowerShell: Copy-Item .env.example .env
 uv sync --frozen
 uv run python manage.py migrate
 uv run python manage.py createsuperuser
