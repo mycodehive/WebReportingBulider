@@ -1,8 +1,23 @@
 from django.urls import path
 from . import views, google_oauth, sharing
 from . import analytics_views
+from . import branding, community
 
 urlpatterns = [
+    path('settings/company/', branding.settings, name='company_settings'),
+    path('company/logo/', branding.logo, name='company_logo'),
+    path('boards/', community.index, name='board_index'),
+    path('boards/new/', community.settings, name='board_create'),
+    path('boards/<uuid:board_id>/', community.listing, name='board_list'),
+    path('boards/<uuid:board_id>/settings/', community.settings, name='board_settings'),
+    path('boards/<uuid:board_id>/taxonomy/', community.taxonomy, name='board_taxonomy'),
+    path('boards/<uuid:board_id>/delete/', community.board_delete, name='board_delete'),
+    path('boards/<uuid:board_id>/new/', community.edit_post, name='board_post_create'),
+    path('boards/<uuid:board_id>/posts/<uuid:post_id>/', community.detail, name='board_post'),
+    path('boards/<uuid:board_id>/posts/<uuid:post_id>/edit/', community.edit_post, name='board_post_edit'),
+    path('boards/<uuid:board_id>/posts/<uuid:post_id>/delete/', community.post_delete, name='board_post_delete'),
+    path('boards/<uuid:board_id>/posts/<uuid:post_id>/status/', community.change_status, name='board_post_status'),
+    path('boards/<uuid:board_id>/posts/<uuid:post_id>/replies/<uuid:reply_id>/', community.reply_edit, name='board_reply_edit'),
     path("reports/<uuid:report_id>/shares/", sharing.shares, name="report_shares"),
     path("reports/<uuid:report_id>/cover/", views.report_cover, name="report_cover"),
     path("api/reports/<uuid:report_id>/infographic-data/", views.infographic_data_api),
