@@ -72,8 +72,10 @@ html[data-sidebar="collapsed"] .company-brand-logo{max-width:40px;object-positio
 
 /* Account, versioned manual, and workspace-menu screens. */
 .login-card form .signup-link{display:flex;width:100%;margin-top:9px}
-.signup-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:8px}
-.signup-actions .button-primary{flex:1}
+.login-card .signup-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:20px}
+.login-card .signup-actions .button{width:100%;min-height:44px;margin:0;padding:12px 16px;font-size:14px;line-height:1.4;border-radius:8px;text-align:center}
+.login-card .signup-actions .button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+@media(max-width:480px){.login-card .signup-actions{grid-template-columns:minmax(0,1fr);gap:10px}}
 .field-error{color:#be123c;font-size:11px;font-weight:600}
 .manual-heading{justify-content:flex-start;flex-wrap:wrap;gap:14px}
 .manual-heading h1{margin:0}
