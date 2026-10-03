@@ -9,7 +9,7 @@ from django.shortcuts import redirect, render
 from django.utils.text import slugify
 from django.views.decorators.http import require_http_methods
 
-from .community_models import MenuConfiguration, default_menu_items
+from .community_models import default_menu_items
 from .models import WorkspaceMenu
 
 
