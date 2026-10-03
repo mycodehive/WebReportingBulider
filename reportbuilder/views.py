@@ -304,8 +304,8 @@ FILE_EXTENSIONS = {"excel": {".xlsx", ".xlsm"}, "csv": {".csv", ".tsv"},
 
 
 def create_connection(user, name, kind, config, upload=None):
-    if not user.is_staff:
-        raise PermissionDenied("데이터 연결은 관리자만 등록할 수 있습니다.")
+    if not user.is_authenticated or not user.is_active:
+        raise PermissionDenied("활성 사용자 계정으로 로그인하세요.")
     if not isinstance(config, dict) or len(json.dumps(config)) > 100000:
         raise ValueError("Invalid connection config")
     if kind not in {"excel", "csv", "sqlite", "access", "postgresql", "mariadb", "mysql", "oracle", "mssql", "sheets", "google_sheets", "rest"}:
@@ -359,8 +359,6 @@ def connections_page(request):
 @login_required
 @require_POST
 def connection_update(request, connection_id):
-    if not request.user.is_staff:
-        raise PermissionDenied("데이터 연결 수정은 관리자만 할 수 있습니다.")
     connection = get_object_or_404(Connection, pk=connection_id, owner=request.user)
     try:
         name = request.POST.get("name", "").strip()
@@ -408,8 +406,6 @@ def connection_update(request, connection_id):
 @login_required
 @require_POST
 def connection_delete(request, connection_id):
-    if not request.user.is_staff:
-        raise PermissionDenied("데이터 연결 삭제는 관리자만 할 수 있습니다.")
     connection = get_object_or_404(Connection, pk=connection_id, owner=request.user)
     upload_name = connection.upload.name if connection.upload else None
     upload_storage = connection.upload.storage if upload_name else None

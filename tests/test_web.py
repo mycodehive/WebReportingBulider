@@ -211,7 +211,7 @@ def test_connections_are_admin_only_and_credentials_encrypted(author_client, adm
     assert "password" not in author_client.get("/api/connections/").content.decode()
     c = Client()
     c.force_login(get_user_model().objects.create_user(username="normal"))
-    assert post(c, "/api/connections/", {"name": "DB", "kind": "rest", "config": {}}).status_code == 403
+    assert post(c, "/api/connections/", {"name": "DB", "kind": "rest", "config": {}}).status_code == 201
     assert post(author_client, "/api/connections/", {"name": "DB", "kind": "rest", "config": {"allowed_hosts": ["evil"]}}).status_code == 400
 
 

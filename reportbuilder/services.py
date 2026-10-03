@@ -24,8 +24,7 @@ def reports_for(user):
 
 
 def connections_for(user):
-    if user.is_staff:
-        return Connection.objects.all()
+    """Workspace connection settings are private to their owner, including staff."""
     return Connection.objects.filter(owner=user)
 
 

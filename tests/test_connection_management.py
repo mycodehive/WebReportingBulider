@@ -10,9 +10,9 @@ from reportbuilder.models import AuditEvent, Connection, Project, Report
 pytestmark = pytest.mark.django_db
 
 
-@pytest.fixture
-def managed_connection(client):
-    owner = get_user_model().objects.create_user(username="connection-owner", is_staff=True)
+@pytest.fixture(params=[False, True], ids=["member", "staff"])
+def managed_connection(client, request):
+    owner = get_user_model().objects.create_user(username="connection-owner", is_staff=request.param)
     connection = Connection.objects.create(
         owner=owner,
         name="Warehouse",
@@ -121,10 +121,102 @@ def test_connection_delete_warns_and_removes_connection(client, managed_connecti
     assert any("다시 매핑해야 합니다" in str(message) for message in response.wsgi_request._messages)
 
 
-def test_non_staff_cannot_edit_or_delete_connections(client, managed_connection):
+def test_non_owner_cannot_edit_or_delete_connections(client, managed_connection):
     _, connection = managed_connection
     member = get_user_model().objects.create_user(username="member")
     client.force_login(member)
 
-    assert client.post(reverse("connection_update", args=[connection.pk]), {}).status_code == 403
-    assert client.post(reverse("connection_delete", args=[connection.pk])).status_code == 403
+    assert client.post(reverse("connection_update", args=[connection.pk]), {}).status_code == 404
+    assert client.post(reverse("connection_delete", args=[connection.pk])).status_code == 404
+
+
+@pytest.mark.parametrize("staff", [False, True], ids=["member", "staff"])
+def test_users_create_private_connections_from_form_and_api(client, settings, tmp_path, staff):
+    from django.core.files.uploadedfile import SimpleUploadedFile
+
+    settings.MEDIA_ROOT = tmp_path
+    user = get_user_model().objects.create_user(username="own-connections", is_staff=staff)
+    other = get_user_model().objects.create_user(username="another-owner")
+    client.force_login(user)
+    page = client.get(reverse("connections")).content.decode()
+    assert "새 연결 등록" in page
+    assert "관리자에게 데이터 연결 등록을 요청하세요" not in page
+    response = client.post(reverse("connections"), {
+        "name": "My uploaded CSV", "kind": "csv", "config": "{}", "owner": other.pk,
+        "file": SimpleUploadedFile("data.csv", b"name,amount\nexample,42\n", content_type="text/csv"),
+    })
+    assert response.status_code == 302
+    uploaded = Connection.objects.get(name="My uploaded CSV")
+    assert uploaded.owner == user
+    assert client.post(f"/api/connections/{uploaded.pk}/test/").status_code == 200
+    assert client.get(f"/api/connections/{uploaded.pk}/schema/").status_code == 200
+
+    response = client.post("/api/connections/", {
+        "name": "My database", "kind": "postgresql", "owner": other.pk,
+        "config": {"host": "example.test", "password": "private-password"},
+    }, content_type="application/json")
+    assert response.status_code == 201
+    connection = Connection.objects.get(pk=response.json()["id"])
+    assert connection.owner == user
+    assert connection.get_secrets()["password"] == "private-password"
+    assert "password" not in connection.config
+    page = client.get(reverse("connections")).content.decode()
+    assert f'data-edit-connection="{connection.pk}"' in page
+    assert "private-password" not in page
+    assert "private-password" not in client.get("/api/connections/").content.decode()
+    assert AuditEvent.objects.filter(user=user, action="connection_create", resource_id=str(connection.pk)).exists()
+
+
+@pytest.mark.parametrize("staff", [False, True], ids=["member", "staff"])
+def test_connection_settings_are_isolated_even_with_shared_group(client, managed_connection, staff):
+    from unittest.mock import patch
+    from django.contrib.auth.models import Group
+
+    owner, connection = managed_connection
+    viewer = get_user_model().objects.create_user(username="private-viewer", is_staff=staff)
+    own = Connection.objects.create(owner=viewer, name="Visible own connection", kind="postgresql")
+    group = Group.objects.create(name="Same department")
+    owner.groups.add(group)
+    viewer.groups.add(group)
+    connection.groups.add(group)
+    client.force_login(viewer)
+
+    page = client.get(reverse("connections")).content.decode()
+    assert connection.name not in page
+    assert str(connection.pk) not in page
+    assert own.name in page
+    assert client.get("/api/connections/").json()["connections"] == [
+        {"id": str(own.pk), "name": own.name, "kind": own.kind, "status": own.status},
+    ]
+    with patch("reportbuilder.views.test_connection") as test_connection, patch("reportbuilder.views.introspect") as schema:
+        assert client.post(f"/api/connections/{connection.pk}/test/").status_code == 404
+        assert client.get(f"/api/connections/{connection.pk}/schema/").status_code == 404
+        test_connection.assert_not_called()
+        schema.assert_not_called()
+    assert client.post(reverse("connection_update", args=[connection.pk]), {
+        "name": "Hijacked", "config": "{}", "owner": viewer.pk,
+    }).status_code == 404
+    assert client.post(reverse("connection_delete", args=[connection.pk])).status_code == 404
+    connection.refresh_from_db()
+    assert connection.owner == owner
+    assert connection.name == "Warehouse"
+
+
+def test_member_mutations_require_login_and_csrf(settings, tmp_path):
+    from django.test import Client
+
+    settings.MEDIA_ROOT = tmp_path
+    strict = Client(enforce_csrf_checks=True)
+    assert strict.get(reverse("connections")).status_code == 302
+    assert strict.get("/api/connections/").status_code == 401
+    user = get_user_model().objects.create_user(username="csrf-member")
+    strict.force_login(user)
+    strict.get(reverse("connections"))
+    payload = {"name": "Protected", "kind": "postgresql", "config": "{}"}
+    assert strict.post(reverse("connections"), payload).status_code == 403
+    assert not Connection.objects.filter(owner=user).exists()
+    assert strict.post(reverse("connections"), payload,
+                       HTTP_X_CSRFTOKEN=strict.cookies["csrftoken"].value).status_code == 302
+    connection = Connection.objects.get(owner=user)
+    assert strict.post(reverse("connection_update", args=[connection.pk]), payload).status_code == 403
+    assert strict.post(reverse("connection_delete", args=[connection.pk])).status_code == 403

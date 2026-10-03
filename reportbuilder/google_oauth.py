@@ -28,11 +28,11 @@ SCOPE = 'https://www.googleapis.com/auth/spreadsheets.readonly'
 TOKEN_URL = 'https://oauth2.googleapis.com/token'
 
 
-def staff_session(view):
+def active_session(view):
     @login_required
     @wraps(view)
     def wrapped(request, *args, **kwargs):
-        if not request.user.is_staff or not request.user.is_active or request.headers.get('Authorization'):
+        if not request.user.is_active or request.headers.get('Authorization'):
             raise PermissionDenied
         response = view(request, *args, **kwargs)
         response['Cache-Control'] = 'private, no-store'
@@ -114,7 +114,7 @@ def sheet_config(post):
             'auth_mode': mode, 'header_row': header}
 
 
-@staff_session
+@active_session
 @require_http_methods(['GET', 'POST'])
 def setup(request):
     app = GoogleOAuthApp.objects.filter(owner=request.user).first()
@@ -137,7 +137,7 @@ def setup(request):
         'oauth_app': app, 'callback_url': request.build_absolute_uri(reverse('google_oauth_callback'))})
 
 
-@staff_session
+@active_session
 @require_POST
 def start(request, connection_id):
     connection = get_object_or_404(Connection, pk=connection_id, owner=request.user, kind__in=['sheets', 'google_sheets'])
@@ -161,7 +161,7 @@ def start(request, connection_id):
         'code_challenge': challenge, 'code_challenge_method': 'S256'}))
 
 
-@staff_session
+@active_session
 @require_GET
 def callback(request):
     pending = request.session.pop('google_oauth', None)
@@ -208,7 +208,7 @@ def callback(request):
     return redirect('connections')
 
 
-@staff_session
+@active_session
 @require_POST
 @transaction.atomic
 def disconnect(request, connection_id):

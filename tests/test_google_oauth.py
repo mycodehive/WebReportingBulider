@@ -12,9 +12,9 @@ from reportbuilder.models import GoogleOAuthApp, Connection
 pytestmark = pytest.mark.django_db
 
 
-@pytest.fixture
-def setup(client):
-    owner = get_user_model().objects.create_user(username='google-admin', is_staff=True)
+@pytest.fixture(params=[False, True], ids=["member", "staff"])
+def setup(client, request):
+    owner = get_user_model().objects.create_user(username='google-owner', is_staff=request.param)
     app = GoogleOAuthApp(owner=owner, client_id='123-test.apps.googleusercontent.com')
     app.set_secret('test-secret')
     app.save()
@@ -80,7 +80,10 @@ def test_state_expiry_permission_and_csrf(client, setup):
     assert client.post(f'/connections/{conn.pk}/google/start/').status_code == 404
     other.is_staff = False
     other.save()
-    assert client.get('/connections/google/oauth/').status_code == 403
+    assert client.get('/connections/google/oauth/').status_code == 200
+    assert app.client_id not in client.get('/connections/google/oauth/').content.decode()
+    assert client.post(f'/connections/{conn.pk}/google/start/').status_code == 404
+    assert client.post(f'/connections/{conn.pk}/google/disconnect/').status_code == 404
 
 
 def test_setup_hides_secret_and_parses_url(client, setup):
