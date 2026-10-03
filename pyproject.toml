@@ -6,9 +6,17 @@ readme = "README.md"
 requires-python = ">=3.12"
 license = "Apache-2.0"
 dependencies = [
-  "django>=5.2,<5.3", "sqlalchemy>=2.0,<2.1", "openpyxl>=3.1,<4",
-  "cryptography>=44", "pillow>=11", "python-dotenv>=1", "httpx>=0.28",
-  "whitenoise>=6.9", "gunicorn>=23; sys_platform != 'win32'", "markdown>=3.7",
+  "django>=5.2,<5.3",
+  "sqlalchemy>=2.0,<2.1",
+  "openpyxl>=3.1,<4",
+  "cryptography>=44",
+  "pillow>=11",
+  "python-dotenv>=1",
+  "httpx>=0.28",
+  "whitenoise>=6.9",
+  "gunicorn>=23; sys_platform != 'win32'",
+  "markdown>=3.7",
+  "bleach[css]>=6.2,<7",
 ]
 
 [project.optional-dependencies]
