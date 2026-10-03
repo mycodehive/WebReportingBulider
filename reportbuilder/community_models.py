@@ -1,6 +1,7 @@
 import uuid
 
 from django.utils.text import slugify
+from urllib.parse import urlsplit
 
 from django.conf import settings
 from django.core.validators import RegexValidator
@@ -133,6 +134,14 @@ class WorkspaceMenu(models.Model):
         ordering = ["order", "label", "key"]
         verbose_name = "워크스페이스 메뉴"
         verbose_name_plural = "워크스페이스 메뉴"
+
+    def clean(self):
+        value = self.url.strip()
+        parsed = urlsplit(value)
+        if not value.startswith("/") or value.startswith("//") or parsed.scheme or parsed.netloc or "\\\\" in value:
+            from django.core.exceptions import ValidationError
+            raise ValidationError({"url": "주소는 사이트 내부 경로(/로 시작)만 등록할 수 있습니다."})
+        self.url = value
 
     def __str__(self):
         return self.label
