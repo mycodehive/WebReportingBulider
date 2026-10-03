@@ -10,7 +10,7 @@ from .models import Board, BoardCategory, BoardPost, BoardReply, BoardStatus
 
 def clean_html(value):
     return bleach.clean(
-        value, tags=['p', 'br', 'h2', 'h3', 'h4', 'strong', 'em', 'u', 's', 'blockquote',
+        value, tags=['p', 'br', 'h2', 'h3', 'h4', 'strong', 'em', 'b', 'i', 'u', 's', 'blockquote',
                      'ul', 'ol', 'li', 'table', 'thead', 'tbody', 'tr', 'th', 'td',
                      'span', 'div', 'a', 'code', 'pre', 'hr'],
         attributes={'*': ['style'], 'a': ['href', 'title'], 'td': ['colspan', 'rowspan'], 'th': ['colspan', 'rowspan']},

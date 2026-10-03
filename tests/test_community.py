@@ -74,6 +74,14 @@ def test_board_role_boundaries_and_hidden_boards(client, community):
     assert client.get(url('board_list', board)).status_code == 200
 
 
+def test_summernote_formats_and_unsafe_html_are_sanitized():
+    value = clean_html('<p><b>굵게</b><i>기울임</i></p><a href="javascript:alert(1)" onclick="bad()">링크</a>'
+                       '<iframe src="https://example.test"></iframe><img src=x onerror=bad()>')
+    assert '<b>굵게</b>' in value and '<i>기울임</i>' in value
+    assert 'javascript:' not in value and 'onclick' not in value and 'onerror' not in value
+    assert '<iframe' not in value and '<img' not in value
+
+
 def test_post_create_edit_reply_and_status(client, community):
     users, board, statuses, posts = community
     foreign = Board.objects.create(name='other', kind='qa')

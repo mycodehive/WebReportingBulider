@@ -1,0 +1,131 @@
+/* Summernote Lite follows the workspace theme, including dialogs and popovers. */
+.community-page .note-editor.note-frame {
+  width: 100%;
+  min-width: 0;
+  margin: 8px 0 20px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--input-bg);
+  color: var(--text);
+}
+.community-page .note-editor:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.community-page .note-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
+  border-radius: 9px 9px 0 0;
+  background: var(--surface-raised);
+}
+.community-page .note-toolbar > .note-btn-group { margin: 0; }
+.community-page .note-btn {
+  min-width: 34px;
+  min-height: 34px;
+  padding: 6px 9px;
+  border-color: var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: none;
+}
+.community-page .note-btn:hover,
+.community-page .note-btn:focus-visible,
+.community-page .note-btn.active,
+.community-page .note-btn.focus {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.community-page .note-btn:focus-visible,
+.community-page .note-dropdown-item:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.community-page .note-editor .note-editing-area .note-editable {
+  padding: 16px;
+  background: var(--input-bg);
+  color: var(--text);
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.community-page .note-editable p { margin: 0 0 12px; }
+.community-page .note-editable table { border-collapse: collapse; max-width: 100%; }
+.community-page .note-editable td,
+.community-page .note-editable th { padding: 8px; border: 1px solid var(--border); }
+.community-page .note-editable blockquote {
+  margin-left: 0;
+  padding: 8px 16px;
+  border-left: 3px solid var(--accent);
+  background: var(--surface-subtle);
+}
+.community-page .note-editable pre { padding: 12px; background: var(--surface-subtle); }
+.community-page .note-editor .note-statusbar,
+.community-page .note-popover .note-popover-content { background: var(--surface-raised); color: var(--text); border-color: var(--border); }
+.community-page .note-editor .note-statusbar .note-resizebar .note-icon-bar { border-color: var(--muted); }
+.community-page .note-dropdown-menu,
+.community-page .note-popover {
+  max-width: calc(100vw - 32px);
+  border-color: var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+.community-page .note-dropdown-menu { z-index: 100; }
+.community-page .note-dropdown-item { color: var(--text); }
+.community-page .note-dropdown-item:hover { background: var(--accent-soft); color: var(--accent); }
+.community-page .note-dropdown-item pre,
+.community-page .note-dropdown-item blockquote { color: var(--text); background: var(--surface-subtle); }
+.community-page .note-popover.bottom .note-popover-arrow:after { border-bottom-color: var(--surface-raised); }
+.community-page .note-dropdown-item h2,
+.community-page .note-dropdown-item h3,
+.community-page .note-dropdown-item h4,
+.community-page .note-dropdown-item p { margin: 0; }
+.community-page .note-dimension-picker { font-size: 18px; }
+.community-page .note-dimension-picker-mousecatcher { background: transparent; }
+.community-page .note-dimension-display { color: var(--muted); }
+.community-page .note-modal { z-index: 1100; padding: 16px; }
+.community-page .note-modal-content {
+  width: min(520px, 100%);
+  max-height: calc(100dvh - 64px);
+  overflow-y: auto;
+  margin: 32px auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+.community-page .note-modal-header {
+  padding: 16px 20px;
+  border-color: var(--border);
+  background: var(--surface-raised);
+}
+.community-page .note-modal-title { color: var(--text); font-size: 18px; }
+.community-page .note-modal-body { padding: 20px; }
+.community-page .note-modal-footer { display: flex; justify-content: flex-end; padding: 12px 20px 20px; height: auto; }
+.community-page .note-modal-footer .note-btn { float: none; width: auto; min-height: 40px; padding: 8px 16px; }
+.community-page .note-modal .note-form-label { color: var(--text); }
+.community-page .note-modal .note-form-control {
+  width: 100%;
+  min-height: 42px;
+  border-color: var(--border);
+  border-radius: 7px;
+  background: var(--input-bg);
+  color: var(--text);
+}
+.community-page .note-modal .note-form-control:focus { border-color: var(--accent); outline: 2px solid var(--accent-soft); }
+.community-page .note-modal .checkbox { margin: 12px 0; }
+.community-page .note-modal input[type=checkbox] { width: auto; min-height: auto; margin-right: 6px; }
+.community-page .note-modal .close { color: var(--muted); opacity: 1; text-shadow: none; }
+.community-page .note-modal .note-btn-primary { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+.community-page .note-tooltip-content { background: var(--text); color: var(--surface); }
+.community-page .editor-fallback { margin-top: 8px; }
+@media (max-width: 600px) {
+  .community-page .note-toolbar { padding: 6px; gap: 5px; }
+  .community-page .note-btn { min-width: 36px; min-height: 38px; padding: 7px; }
+  .community-page .note-editor .note-editing-area .note-editable { padding: 12px; }
+  .community-page .note-modal { padding: 12px; }
+  .community-page .note-modal-content { margin: 20px auto; }
+}
