@@ -41,7 +41,7 @@ html[data-sidebar="collapsed"] .company-brand-logo{max-width:40px;object-positio
 
 .user-picker{position:relative;margin:0 0 20px}
 .user-picker-search{margin-bottom:6px}
-.user-picker-results{position:absolute;z-index:20;top:calc(100% - 48px);left:0;right:0;max-height:240px;overflow:auto;border:1px solid var(--border);border-radius:9px;background:var(--surface);box-shadow:var(--shadow)}
+.user-picker-results{position:absolute;z-index:20;top:43px;left:0;right:0;max-height:240px;overflow:auto;border:1px solid var(--border);border-radius:9px;background:var(--surface);box-shadow:var(--shadow)}
 .user-picker-option{display:flex;width:100%;flex-direction:column;gap:2px;padding:10px 12px;border:0;border-bottom:1px solid var(--border);background:var(--surface);color:var(--text);text-align:left}
 .user-picker-option:last-child{border-bottom:0}
 .user-picker-option:hover,.user-picker-option:focus{background:var(--accent-soft);outline:0}
