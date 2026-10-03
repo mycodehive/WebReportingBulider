@@ -206,3 +206,21 @@ class PublicShare(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     public_window_started = models.DateTimeField(null=True, blank=True)
     public_window_count = models.PositiveSmallIntegerField(default=0)
+
+
+class ManualVersion(models.Model):
+    AUDIENCES = [("user", "사용자용"), ("admin", "관리자용")]
+    audience = models.CharField("대상", max_length=10, choices=AUDIENCES)
+    version = models.CharField("버전", max_length=40)
+    content = models.TextField("매뉴얼 내용")
+    is_published = models.BooleanField("홈페이지 공개", default=False)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["audience", "-created_at", "-id"]
+        constraints = [models.UniqueConstraint(fields=["audience", "version"], name="manual_audience_version_unique")]
+
+    def __str__(self):
+        return f"{self.get_audience_display()} v{self.version}"
