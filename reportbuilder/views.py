@@ -31,7 +31,7 @@ from PIL import Image
 from .analytics import record_report_access
 from .data import DataError, connector_catalog, introspect, test_connection
 from .definition import DefinitionError, default_definition, validate_definition
-from .models import Asset, Connection, DemoSeed, EmbedNonce, Execution, Project, Publication, Report, Revision
+from .models import Asset, Connection, DemoSeed, EmbedNonce, Execution, ManualVersion, Project, Publication, Report, Revision
 from .packaging import MAX_ASSET, export_project, import_project, validate_asset
 from .rendering import pdf_bytes
 from .services import (audit, connections_for, editable, execute_report, policy_fingerprint,
@@ -752,5 +752,16 @@ def embed_view(request):
 
 @login_required
 def manual(request):
-    text = (Path(__file__).parent / "manual.md").read_text(encoding="utf-8")
-    return render(request, "reportbuilder/manual.html", {"manual_html": markdown.markdown(text, extensions=["tables", "fenced_code"])})
+    audience = "admin" if request.user.is_staff else "user"
+    version = ManualVersion.objects.filter(audience=audience, is_published=True).order_by("-created_at", "-id").first()
+    if version:
+        text = version.content
+        version_label = version.version
+    else:
+        text = (Path(__file__).parent / "manual.md").read_text(encoding="utf-8")
+        version_label = "기본"
+    return render(request, "reportbuilder/manual.html", {
+        "manual_html": markdown.markdown(text, extensions=["tables", "fenced_code"]),
+        "manual_version": version_label,
+        "manual_audience": audience,
+    })
