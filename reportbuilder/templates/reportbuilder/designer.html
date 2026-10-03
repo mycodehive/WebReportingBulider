@@ -1,7 +1,7 @@
 {% extends 'reportbuilder/base.html' %}
 {% load static %}
 {% block title %}{{ report.name }} · 레포트 디자이너{% endblock %}
-{% block head %}<link rel="stylesheet" href="{% static 'reportbuilder/magnetic.css' %}"><link rel="stylesheet" href="{% static 'reportbuilder/report-actions.css' %}">{% endblock %}
+{% block head %}<link rel="stylesheet" href="{% static 'reportbuilder/report-media.css' %}"><link rel="stylesheet" href="{% static 'reportbuilder/magnetic.css' %}"><link rel="stylesheet" href="{% static 'reportbuilder/report-actions.css' %}">{% endblock %}
 {% block content %}
 <div id="designer" data-report-id="{{ report.id }}" data-revision="{{ report.revision }}">
   <div class="page-heading designer-heading"><div><div class="eyebrow">REPORT DESIGNER</div><h1>레포트 디자이너</h1><p class="muted">데이터를 연결하고, 필드를 끌어 원하는 보고서를 만드세요.</p></div><a class="button button-secondary" href="/reports/">라이브러리</a></div>
@@ -19,12 +19,23 @@
   <span id="workspace-status" class="sr-only" role="status" aria-live="polite"></span>
   <div id="designer-workspace" class="designer-workspace">
     <aside class="designer-panel source-panel">
-      <div class="panel-tabs" role="tablist"><button class="panel-tab active" data-panel="data" role="tab">데이터</button><button class="panel-tab" data-panel="elements" role="tab">요소</button></div>
+      <div class="panel-tabs" role="tablist"><button class="panel-tab active" data-panel="data" role="tab" aria-selected="true">데이터</button><button class="panel-tab" data-panel="elements" role="tab" aria-selected="false">요소</button><button class="panel-tab" data-panel="infographic" role="tab" aria-selected="false">인포그래픽</button></div>
       <div id="data-panel" class="panel-body">
         <div class="panel-section"><h2>데이터 소스</h2><label class="field">연결<select id="connection-select" class="input"><option value="">연결 선택</option></select></label><a href="/connections/" class="text-link">+ 새 연결 관리</a><label class="field mt">테이블 / 시트<select id="object-select" class="input"><option value="">먼저 연결을 선택하세요</option></select></label><button id="add-dataset" class="button button-primary full-width mt" disabled>데이터셋 추가</button></div>
         <div class="panel-section"><div class="section-title"><h2>보고서 데이터셋</h2><button id="open-mapping" class="text-button">재연결</button></div><select id="dataset-select" class="input" aria-label="보고서 데이터셋"></select><p class="help-text">필드를 클릭하거나 캔버스로 끌어 배치하세요.</p><div id="field-list" class="field-list"></div></div>
         <div class="panel-section"><h2>조회 설정</h2><button id="open-query" class="button button-secondary full-width">필터 · 정렬 · 매개변수</button><p id="query-summary" class="help-text"></p></div>
       </div>
+      <div id="infographic-panel" class="panel-body" hidden><div class="panel-section"><h2>통계 인포그래픽</h2><p class="help-text">수치를 차트 이미지로 만들어 보고서에 배치합니다. 데이터가 바뀌면 다시 생성하세요.</p>
+       <label class="field">차트 유형<select id="infographic-type" class="input"><option value="bar">막대 차트</option><option value="line">선 차트</option><option value="donut">도넛 차트</option><option value="kpi">핵심 수치 (합계)</option></select></label>
+       <label class="field">제목<input id="infographic-title" class="input" value="통계 요약" maxlength="80"></label><label class="field">단위<input id="infographic-unit" class="input" placeholder="건, 원, %" maxlength="12"></label><label class="field">강조 색<input id="infographic-color" class="input" type="color" value="#4f46e5"></label>
+       <label class="field">수치 입력 방식<select id="infographic-source" class="input"><option value="manual">직접 입력</option><option value="dataset">보고서 데이터셋</option></select></label>
+       <div id="infographic-manual"><label class="field">항목,숫자 (한 줄에 한 항목)<textarea id="infographic-values" class="input" rows="5">1분기,120
+2분기,180
+3분기,150
+4분기,240</textarea></label><p class="help-text">최대 24개 항목. 예: 서울,120</p></div>
+       <div id="infographic-data" hidden><label class="field">데이터셋<select id="infographic-dataset" class="input"></select></label><label class="field">항목 필드<select id="infographic-label" class="input"></select></label><label class="field">수치 필드<select id="infographic-value" class="input"></select></label><label class="field">집계<select id="infographic-aggregation" class="input"><option value="sum">합계</option><option value="avg">평균</option></select></label><label class="field">보고서 입력값 (JSON)<textarea id="infographic-parameters" class="input" rows="3">{}</textarea></label><p class="help-text">현재 편집본을 저장한 뒤 조회합니다. 같은 항목 이름을 묶어 집계합니다. 필터로 최대 24개 항목을 선택하세요.</p></div>
+       <button type="button" id="infographic-generate" class="button button-secondary full-width">차트 미리보기</button><canvas id="infographic-preview" class="infographic-preview" role="img" aria-label="생성된 인포그래픽 미리보기" hidden></canvas><p id="infographic-status" class="help-text" role="status" aria-live="polite"></p><button type="button" id="infographic-insert" class="button button-primary full-width" disabled>캔버스에 추가</button>
+      </div></div>
       <div id="elements-panel" class="panel-body" hidden><div class="panel-section"><h2>요소 추가</h2><p class="help-text">클릭하거나 끌어서 배치할 수 있습니다.</p><div class="element-palette"><button draggable="true" data-element="text"><span>T</span>텍스트</button><button draggable="true" data-element="image"><span>▧</span>이미지</button><button draggable="true" data-element="line"><span>─</span>선</button><button draggable="true" data-element="rectangle"><span>▭</span>사각형</button><button draggable="true" data-element="page_number"><span>#</span>현재 페이지</button><button draggable="true" data-element="total_pages"><span>Σ</span>전체 페이지</button><button draggable="true" data-element="generated_at"><span>◷</span>생성 일시</button><button draggable="true" data-element="parameter"><span>{ }</span>매개변수</button><button draggable="true" data-element="page_break"><span>↵</span>페이지 나눔</button></div></div><div class="panel-section"><h2>반복 영역 (밴드)</h2><select id="band-type" class="input" aria-label="추가할 밴드 유형"><option value="ReportHeader">보고서 머리글</option><option value="PageHeader">페이지 머리글</option><option value="Detail">상세 반복</option><option value="PageFooter">페이지 바닥글</option><option value="ReportFooter">보고서 바닥글</option></select><button id="add-band" class="button button-secondary full-width mt">밴드 추가</button><p class="help-text">상세 반복 밴드는 데이터 행마다 반복됩니다. 실제 페이지 구성은 미리보기에서 확인하세요.</p></div></div>
     </aside>
     <section class="canvas-region" aria-label="보고서 캔버스">
@@ -41,4 +52,4 @@
 </div>
 {{ report.definition|json_script:'report-definition' }}
 {% endblock %}
-{% block scripts %}<script src="{% static 'reportbuilder/magnetic.js' %}" defer></script><script src="{% static 'reportbuilder/designer.js' %}" defer></script>{% endblock %}
+{% block scripts %}<script src="{% static 'reportbuilder/infographics.js' %}" defer></script><script src="{% static 'reportbuilder/magnetic.js' %}" defer></script><script src="{% static 'reportbuilder/designer.js' %}" defer></script>{% endblock %}

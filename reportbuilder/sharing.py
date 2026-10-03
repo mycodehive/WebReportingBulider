@@ -5,9 +5,10 @@ import secrets
 from datetime import datetime, timedelta
 
 from django.http import HttpResponse, JsonResponse
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render, redirect
+from django.contrib.auth.hashers import make_password, check_password
 from django.utils import timezone
-from django.views.decorators.http import require_http_methods, require_GET
+from django.views.decorators.http import require_http_methods
 from django.db.models import F, Q
 
 from .analytics import record_report_access
@@ -70,7 +71,7 @@ def shares(request, report):
                 status = '기간 만료'
             elif item.starts_at and now < item.starts_at:
                 status = '시작 대기'
-            rows.append({'id': str(item.pk), 'starts_at': item.starts_at, 'ends_at': item.ends_at, 'status': status, 'revoked': item.revoked})
+            rows.append({'id': str(item.pk), 'starts_at': item.starts_at, 'ends_at': item.ends_at, 'status': status, 'revoked': item.revoked, 'password_protected': bool(item.password_hash)})
         return JsonResponse({'shares': rows, 'parameters': publication.revision.definition.get('parameters', []) if publication else []})
     if not publication or not publication.enabled or not report.enabled or not report.owner.is_active:
         return JsonResponse({'message': '활성 보고서를 먼저 게시하세요.'}, status=400)
@@ -82,6 +83,9 @@ def shares(request, report):
         if ends_at and (ends_at <= timezone.now() or starts_at and ends_at <= starts_at):
             raise ValueError('종료 시각은 현재와 시작 시각보다 뒤여야 합니다.')
         parameters = data.get('parameters', {})
+        password = data.get('password', '')
+        if not isinstance(password, str) or password and not 8 <= len(password) <= 128:
+            raise ValueError('공유 비밀번호는 8~128자로 입력하세요.')
         if not isinstance(parameters, dict):
             raise ValueError('보고서 입력값을 확인하세요.')
         validate_parameters(publication.revision.definition, parameters)
@@ -89,11 +93,12 @@ def shares(request, report):
         return JsonResponse({'message': str(exc)}, status=400)
     token = secrets.token_urlsafe(32)
     PublicShare.objects.create(report=report, revision=publication.revision, token_hash=digest(token),
-                               starts_at=starts_at, ends_at=ends_at, parameters=parameters)
+                               starts_at=starts_at, ends_at=ends_at, parameters=parameters,
+                               password_hash=make_password(password) if password else '')
     return JsonResponse({'url': request.build_absolute_uri('/shared/' + token + '/')}, status=201)
 
 
-@require_GET
+@require_http_methods(['GET', 'POST'])
 def public_report(request, token):
     share = PublicShare.objects.select_related('report__owner', 'report__publication').filter(token_hash=digest(token)).first()
     now = timezone.now()
@@ -115,6 +120,25 @@ def public_report(request, token):
             response = secured(HttpResponse('요청이 너무 많습니다. 잠시 후 다시 시도하세요.', status=429))
             response['Retry-After'] = '60'
             return response
+    password_hash = share.password_hash
+    if password_hash:
+        key = 'public_share_' + str(share.pk)
+        grant = digest(share.password_hash)
+        if request.session.get(key) != grant:
+            error = None
+            if request.method == 'POST':
+                password = request.POST.get('password', '')
+                if len(password) <= 128 and check_password(password, share.password_hash):
+                    request.session[key] = grant
+                    return secured(redirect('public_report', token=token))
+                error = '비밀번호가 맞지 않습니다. 다시 입력하세요.'
+            response = secured(render(request, 'reportbuilder/share_password.html', {'error': error},
+                                      status=403 if error else 200))
+            # Native form POSTs need a same-origin Origin for Django's CSRF check.
+            # Cross-origin requests still receive no referrer and cannot submit the form.
+            response['Referrer-Policy'] = 'same-origin'
+            response['Content-Security-Policy'] = "default-src 'none'; style-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"
+            return response
     try:
         rendered = render_public_report(share.report, share.report.owner, share.revision.definition,
                                         share.revision.bindings, share.parameters)
@@ -124,6 +148,8 @@ def public_report(request, token):
     share.refresh_from_db()
     now = timezone.now()
     from .models import Publication
+    if share.password_hash != password_hash:
+        return secured(HttpResponse('공유 설정이 변경되었습니다. 새로고침한 뒤 다시 열어 주세요.', status=403))
     if (share.revoked or share.ends_at and now >= share.ends_at
             or not Publication.objects.filter(report=share.report, enabled=True, report__enabled=True,
                                                revision_id=share.revision_id, report__owner__is_active=True).exists()):

@@ -3,6 +3,8 @@ from urllib.parse import urlsplit
 
 import pytest
 from django.contrib.auth import get_user_model
+from django.contrib.auth.hashers import check_password, make_password
+from django.test import Client
 from django.utils import timezone
 
 from reportbuilder.definition import default_definition
@@ -42,6 +44,44 @@ def test_public_link_anonymous_and_revocable(client, published):
     assert response.status_code == 200
     client.logout()
     assert client.get(url).status_code == 404
+
+
+def test_password_share_challenges_before_rendering_and_scopes_unlock(client, published, monkeypatch):
+    url = create(client, published, password='Correct-pass-123')
+    share = PublicShare.objects.get()
+    assert share.password_hash != 'Correct-pass-123'
+    assert check_password('Correct-pass-123', share.password_hash)
+    listing = client.get(f'/reports/{published.pk}/shares/').json()['shares'][0]
+    assert listing['password_protected'] is True
+    assert 'password_hash' not in listing
+    rendered = []
+    monkeypatch.setattr('reportbuilder.sharing.render_public_report', lambda *args: rendered.append(True) or {'html': '<p>Protected contents</p>'})
+    client.logout()
+    assert b'password' in client.get(url).content
+    assert client.post(url, {'password': 'wrong'}).status_code == 403
+    assert not rendered
+    assert client.post(url, {'password': 'Correct-pass-123'}).status_code == 302
+    assert b'Protected contents' in client.get(url).content
+    another = Client()
+    assert b'Protected contents' not in another.get(url).content
+    share.password_hash = make_password('Changed-pass-123')
+    share.save(update_fields=['password_hash'])
+    assert b'Protected contents' not in client.get(url).content
+    share.revoked = True
+    share.save(update_fields=['revoked'])
+    assert client.post(url, {'password': 'Changed-pass-123'}).status_code == 404
+
+
+def test_password_validation_and_csrf(client, published):
+    endpoint = f'/reports/{published.pk}/shares/'
+    for password in ['short', 'x' * 129, 123, None]:
+        assert client.post(endpoint, {'password':password}, content_type='application/json').status_code == 400
+    url = create(client, published, password='Correct-pass-123')
+    visitor = Client(enforce_csrf_checks=True)
+    assert visitor.get(url).status_code == 200
+    assert visitor.post(url, {'password':'Correct-pass-123'}).status_code == 403
+    assert visitor.post(url, {'password':'Correct-pass-123'},
+                        HTTP_X_CSRFTOKEN=visitor.cookies['csrftoken'].value).status_code == 302
 
 
 def test_dates_and_publication_changes(client, published):

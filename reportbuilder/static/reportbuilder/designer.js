@@ -197,7 +197,7 @@
   }
   function render() {$('report-name').value=definition.name;renderSources();renderCanvas();renderProperties();renderLayers();updateHistory();}
   $('report-name').addEventListener('change',()=>mutate(()=>definition.name=$('report-name').value.trim()||'새 보고서'));
-  document.querySelectorAll('[data-panel]').forEach(button=>button.onclick=()=>{document.querySelectorAll('[data-panel]').forEach(b=>b.classList.toggle('active',b===button));$('data-panel').hidden=button.dataset.panel!=='data';$('elements-panel').hidden=button.dataset.panel!=='elements';});
+  document.querySelectorAll('[data-panel]').forEach(button=>button.onclick=()=>{document.querySelectorAll('[data-panel]').forEach(b=>{b.classList.toggle('active',b===button);b.setAttribute('aria-selected',String(b===button));});for(const panel of ['data','elements','infographic'])$(`${panel}-panel`).hidden=button.dataset.panel!==panel;});
   document.querySelectorAll('[data-element]').forEach(button=>{button.onclick=()=>addElement(button.dataset.element);button.addEventListener('dragstart',event=>event.dataTransfer.setData('application/report-element',JSON.stringify({type:button.dataset.element})));});
   $('dataset-select').onchange=()=>{renderSources();};
   $('connection-select').onchange=()=>attempt(async()=>{objects=[];$('object-select').replaceChildren(option('','스키마 불러오는 중…'));$('add-dataset').disabled=true;if(!$('connection-select').value){$('object-select').replaceChildren(option('','먼저 연결을 선택하세요'));return;}const result=await api(`/api/connections/${$('connection-select').value}/schema/`);objects=Array.isArray(result)?result:result.tables||result.objects||result.schema?.tables||[];const options=objects.map((o,i)=>option(String(i),`${o.schema?`${o.schema}.`:''}${objectName(o)}`));$('object-select').replaceChildren(option('','테이블 / 시트 선택'),...options);if(!objects.length)message('조회 가능한 테이블이나 시트가 없습니다.',true);});
@@ -232,6 +232,25 @@
   $('add-filter').onclick=()=>{if(!dataset()?.fields?.length)return;queryDraft.filters.items.push({field_id:dataset().fields[0].field_id,operator:'eq',value:''});renderQuery();};$('add-sort').onclick=()=>{if(!dataset()?.fields?.length)return;queryDraft.sorts.push({field_id:dataset().fields[0].field_id,direction:'asc',nulls:'last'});renderQuery();};$('add-parameter').onclick=()=>{queryDraft.parameters.push({name:`parameter_${queryDraft.parameters.length+1}`,label:'매개변수',type:'string',required:false,default:''});renderQuery();};
   $('apply-query').onclick=()=>{const q=queryDraft,names=q.parameters.map(p=>p.name);if(names.some(n=>! /^[A-Za-z][A-Za-z0-9_]*$/.test(n))||new Set(names).size!==names.length){message('매개변수 이름은 영문으로 시작하는 영문·숫자·밑줄 조합이며 중복될 수 없습니다.',true);return;}if(q.filters.items.some(f=>f.parameter!==undefined&&!names.includes(f.parameter))){message('필터에서 유효한 매개변수를 선택하세요.',true);return;}for(const p of q.parameters){if(['number','integer'].includes(p.type)){if(p.default==='')delete p.default;else if(!Number.isFinite(Number(p.default))||(p.type==='integer'&&!Number.isInteger(Number(p.default)))){message('숫자 매개변수의 기본값을 확인하세요.',true);return;}else p.default=Number(p.default);}else if(p.type==='boolean'){if(!['true','false',''].includes(String(p.default))){message('불리언 기본값은 true 또는 false를 입력하세요.',true);return;}p.default=p.default==='true';}}q.filters.op=$('filter-op').value;for(const f of q.filters.items){if(f.value!==undefined){const type=dataset().fields.find(x=>x.field_id===f.field_id)?.type;if(['number','integer'].includes(type)&&f.value!==''){if(!Number.isFinite(Number(f.value))){message('숫자 필터에는 숫자를 입력하세요.',true);return;}f.value=Number(f.value);}if(type==='boolean')f.value=f.value==='true';}}mutate(()=>{dataset().query.filters=clone(q.filters);dataset().query.sorts=clone(q.sorts);definition.parameters=clone(q.parameters);});$('query-dialog').close();};
   document.addEventListener('keydown',event=>{if(document.querySelector('dialog[open]')||/INPUT|TEXTAREA|SELECT/.test(event.target.tagName))return;if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='z'){event.preventDefault();$(event.shiftKey?'redo':'undo').click();return;}if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='s'){event.preventDefault();$('save').click();return;}const hit=findElement(selected);if(!hit)return;if(event.key==='Delete'||event.key==='Backspace'){event.preventDefault();removeElement();}if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)){event.preventDefault();mutate(()=>{const g=hit.element.geometry,delta=event.shiftKey?5:1;if(event.key==='ArrowLeft')g.x_mm=Math.max(0,g.x_mm-delta);if(event.key==='ArrowRight')g.x_mm+=delta;if(event.key==='ArrowUp')g.y_mm=Math.max(0,g.y_mm-delta);if(event.key==='ArrowDown')g.y_mm+=delta;});}});
+  window.initReportInfographics?.({
+    datasets:()=>definition.datasets,
+    data:async value=>{await save();return api(`${endpoint}infographic-data/`,'POST',value);},
+    insert:async blob=>{
+      const form=new FormData();form.append('image',blob,'infographic.png');form.append('report_id',id);
+      const result=await api('/api/assets/','POST',form);assetURLs[result.id]=result.url;
+      mutate(()=>{
+        const p=page(),maxW=p.width_mm-p.margins.left-p.margins.right,maxH=p.height_mm-p.margins.top-p.margins.bottom;
+        let b=p.bands.find(b=>b.band_id===activeBand);
+        if(p.kind==='flow'&&!b){b=p.bands.find(b=>b.type==='ReportHeader');if(!b){b={band_id:uid('band'),type:'ReportHeader',height_mm:65,elements:[]};p.bands.unshift(b);}}
+        const list=b?b.elements:p.elements,width=Math.min(150,maxW),height=Math.min(width*720/1280,maxH);
+        const bottom=Math.max(0,...list.map(e=>e.geometry.y_mm+e.geometry.height_mm));
+        const y=Math.min(list.length?bottom+4:0,Math.max(0,maxH-height));
+        if(b)b.height_mm=Math.min(maxH,Math.max(b.height_mm,y+height));
+        const e={element_id:uid('element'),type:'image',asset_id:result.id,fit:'contain',geometry:{x_mm:0,y_mm:y,width_mm:width,height_mm:height},style:{},overflow:'fixed_clip'};
+        list.push(e);selected=e.element_id;activeBand=b?.band_id||null;
+      });
+    }
+  });
   window.addEventListener('beforeunload',event=>{if(dirty){event.preventDefault();event.returnValue='';}});
   definition.datasets ||= [];definition.parameters ||= [];definition.pages ||= [freshPage()];definition.pages.forEach(p=>{p.elements||=[];p.bands||=[];p.margins||={top:15,right:15,bottom:15,left:15};});render();
   attempt(async()=>{const result=await api(endpoint);bindings=result.bindings||[];revision=result.revision??revision;updatePublicationLink(result.publication_url);const list=await api('/api/connections/');connections=Array.isArray(list)?list:list.connections||list.results||[];$('connection-select').replaceChildren(option('','연결 선택'),...connections.map(c=>option(c.id,`${c.name} · ${c.kind||c.connector||''}`)));});

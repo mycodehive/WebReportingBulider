@@ -4,6 +4,7 @@ import io
 import json
 import logging
 import uuid
+from decimal import Decimal, InvalidOperation
 from datetime import timedelta
 from functools import wraps
 from pathlib import Path
@@ -473,6 +474,72 @@ def normalised_png(source):
     content = output.getvalue()
     validate_asset(content, "image/png")
     return content
+
+
+@login_required
+@require_POST
+def report_cover(request, report_id):
+    report = get_object_or_404(reports_for(request.user), pk=report_id)
+    editable(report, request.user)
+    if request.POST.get('remove') == 'yes':
+        report.cover = None
+        report.save(update_fields=['cover'])
+        messages.success(request, '대표 이미지를 제거했습니다.')
+        return redirect('library')
+    upload = request.FILES.get('cover')
+    try:
+        if not upload or upload.size > 10 * 1024 * 1024:
+            raise ValueError('10MB 이하의 이미지를 선택하세요.')
+        content = normalised_png(upload)
+    except ValueError:
+        messages.error(request, '대표 이미지는 10MB 이하의 PNG, JPEG, GIF, WebP 파일로 등록하세요.')
+        return redirect('library')
+    report.cover = Asset.objects.create(owner=report.owner, project=report.project,
+                                       name='Report cover', mime='image/png',
+                                       file=ContentFile(content, name='cover.png'))
+    report.save(update_fields=['cover'])
+    messages.success(request, '대표 이미지를 등록했습니다.')
+    return redirect('library')
+
+
+@api
+@require_POST
+def infographic_data_api(request, report_id):
+    report = get_object_or_404(reports_for(request.user), pk=report_id)
+    editable(report, request.user)
+    data = body(request)
+    dataset_id, label_id, value_id = data.get('dataset_id'), data.get('label_id'), data.get('value_id')
+    contract = next((ds for ds in report.definition['datasets'] if ds['dataset_id'] == dataset_id), None)
+    if not contract:
+        raise DefinitionError('데이터셋을 먼저 연결하세요.')
+    fields = {field['field_id']: field for field in contract['fields']}
+    if label_id not in fields or value_id not in fields or fields[value_id]['type'] not in {'integer', 'decimal', 'number'}:
+        raise DefinitionError('항목 필드와 숫자 형식의 수치 필드를 선택하세요.')
+    aggregation = data.get('aggregation', 'sum')
+    if aggregation not in {'sum', 'avg'}:
+        raise ValueError('Invalid aggregation')
+    results = run_datasets(report, request.user, report.definition, report.bindings, data.get('parameters', {}))
+    groups = {}
+    for row in results[dataset_id]['rows']:
+        value = row.get(value_id)
+        if value is None:
+            continue
+        try:
+            number = Decimal(str(value))
+        except InvalidOperation:
+            raise DefinitionError('수치 필드에 숫자가 아닌 값이 있습니다. 필드 매핑을 확인하세요.') from None
+        if not number.is_finite() or abs(number) > Decimal('1e15'):
+            raise DefinitionError('수치는 유한한 숫자이고 절댓값이 1,000조 이하여야 합니다.')
+        label = str(row.get(label_id) if row.get(label_id) is not None else '미분류')[:200]
+        total, count = groups.get(label, (Decimal(0), 0))
+        groups[label] = total + number, count + 1
+    if len(groups) > 24:
+        raise DefinitionError('차트 항목은 최대 24개입니다. 데이터셋 필터로 범위를 줄이세요.')
+    points = [{'label': label, 'value': float(total / count if aggregation == 'avg' else total)}
+              for label, (total, count) in groups.items()]
+    response = JsonResponse({'points': points})
+    response['Cache-Control'] = 'private, no-store'
+    return response
 
 
 @login_required
