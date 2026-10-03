@@ -90,3 +90,103 @@ def test_admin_can_rebuild_selected_users_demo_and_explain_menus(client, setting
     menus = client.get(reverse("admin:reportbuilder_workspacemenu_changelist"))
     assert menus.status_code == 200
     assert WorkspaceMenu.objects.filter(key="manual").exists()
+
+
+def test_admin_account_creation_seeds_member_demo(client, settings, tmp_path):
+    settings.MEDIA_ROOT = tmp_path
+    admin_user = get_user_model().objects.create_superuser("creator", "creator@example.test", "Admin!Password2026")
+    client.force_login(admin_user)
+    response = client.post(reverse("admin:auth_user_add"), {
+        "username": "admin-created-member", "password1": "Distinctive!BlueRiver2026",
+        "password2": "Distinctive!BlueRiver2026", "usable_password": "true", "_save": "저장",
+    })
+    assert response.status_code == 302
+    member = get_user_model().objects.get(username="admin-created-member")
+    assert not member.is_staff
+    assert Report.objects.filter(owner=member, name="매출 현황 예제").exists()
+    client.force_login(member)
+    assert "매출 현황 예제" in client.get(reverse("library")).content.decode()
+
+
+def test_failed_signup_demo_keeps_account_and_member_can_retry(client, settings, tmp_path):
+    from unittest.mock import patch
+    from reportbuilder.models import Project
+
+    settings.MEDIA_ROOT = tmp_path
+
+    def partially_fail(*args, **kwargs):
+        Project.objects.create(owner_id=kwargs["user_id"], name="Unfinished demo")
+        raise OSError("Synthetic storage failure")
+
+    with patch("reportbuilder.demo.call_command", side_effect=partially_fail):
+        response = client.post(reverse("signup"), {
+            "username": "retry-member", "email": "retry@example.test",
+            "password1": "Distinctive!BlueRiver2026", "password2": "Distinctive!BlueRiver2026",
+        })
+    assert response.status_code == 302
+    member = get_user_model().objects.get(username="retry-member")
+    assert "_auth_user_id" in client.session
+    assert not Project.objects.filter(owner=member).exists()
+    assert 'id="demo-bootstrap"' in client.get(reverse("library")).content.decode()
+    assert client.post(reverse("ensure_demo")).json() == {"ready": True}
+    report = Report.objects.get(owner=member)
+    assert client.post(reverse("ensure_demo")).json() == {"ready": True}
+    assert Report.objects.filter(owner=member).count() == 1
+    assert str(report.pk) in client.get(reverse("library")).content.decode()
+
+
+def test_failed_admin_demo_keeps_new_account(client, settings, tmp_path):
+    from unittest.mock import patch
+
+    settings.MEDIA_ROOT = tmp_path
+    admin_user = get_user_model().objects.create_superuser("admin-failure", "admin@example.test", "Admin!Password2026")
+    client.force_login(admin_user)
+    with patch("reportbuilder.demo.call_command", side_effect=OSError("Synthetic storage failure")):
+        response = client.post(reverse("admin:auth_user_add"), {
+            "username": "saved-despite-demo-failure", "password1": "Distinctive!BlueRiver2026",
+            "password2": "Distinctive!BlueRiver2026", "usable_password": "true", "_save": "저장",
+        })
+    assert response.status_code == 302
+    member = get_user_model().objects.get(username="saved-despite-demo-failure")
+    assert not Report.objects.filter(owner=member).exists()
+    assert any("데모 보고서 생성에 실패" in str(msg) for msg in response.wsgi_request._messages)
+
+
+def test_admin_demo_batch_continues_after_failure_and_preserves_custom_reports(client, settings, tmp_path):
+    from unittest.mock import patch
+    from reportbuilder.demo import call_command as real_command
+    from reportbuilder.models import Project
+
+    settings.MEDIA_ROOT = tmp_path
+    admin_user = get_user_model().objects.create_superuser("batch-admin", "batch@example.test", "Admin!Password2026")
+    failing = get_user_model().objects.create_user("failing-user")
+    succeeding = get_user_model().objects.create_user("succeeding-user")
+    inactive = get_user_model().objects.create_user("inactive-user", is_active=False)
+    custom = Report.objects.create(owner=succeeding, name="My custom report",
+                                   project=Project.objects.create(owner=succeeding, name="My project"))
+    client.force_login(admin_user)
+    page = client.get(reverse("admin:auth_user_changelist"))
+    assert "데모 보고서 생성 / 재생성" in page.content.decode()
+
+    def selectively_fail(*args, **kwargs):
+        if kwargs["user_id"] == str(failing.pk):
+            raise OSError("Synthetic storage failure")
+        return real_command(*args, **kwargs)
+
+    with patch("reportbuilder.demo.call_command", side_effect=selectively_fail):
+        response = client.post(reverse("admin:auth_user_changelist"), {
+            "action": "generate_demo_reports", "_selected_action": [failing.pk, succeeding.pk, inactive.pk],
+        })
+    assert response.status_code == 302
+    assert Report.objects.filter(owner=succeeding, name="매출 현황 예제").count() == 1
+    assert Report.objects.filter(pk=custom.pk).exists()
+    assert not Report.objects.filter(owner=failing).exists()
+    assert not Report.objects.filter(owner=inactive).exists()
+    feedback = " ".join(str(msg) for msg in response.wsgi_request._messages)
+    assert "실패 1명" in feedback and "failing-user" in feedback
+    assert "사용자 1명" in feedback and "비활성 사용자 1명" in feedback
+    response = client.post(reverse("admin:auth_user_changelist"), {
+        "action": "generate_demo_reports", "_selected_action": [failing.pk],
+    })
+    assert response.status_code == 302
+    assert Report.objects.filter(owner=failing, name="매출 현황 예제").exists()

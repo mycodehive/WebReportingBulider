@@ -1,11 +1,9 @@
-import io
-
 from django.contrib import admin, messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin
-from django.core.management import call_command
 from django.db import transaction
 
+from .demo import prepare_user_demo
 from .models import (
     ApiToken, Asset, AuditEvent, Board, BoardCategory, BoardPost, BoardReply, BoardStatus,
     CompanyBranding, Connection, Execution, ManualVersion, Project,
@@ -14,7 +12,7 @@ from .models import (
 
 
 MENU_GUIDES = {
-    "User": ("관리자에서 계정을 만들고 상태·권한을 관리합니다.", "새 계정 등록 시 데모 보고서를 준비하며, 사용자 목록의 작업 메뉴에서 선택 사용자의 데모를 다시 생성할 수 있습니다."),
+    "User": ("관리자에서 계정을 만들고 상태·권한을 관리합니다.", "새 계정 등록 시 데모 보고서를 준비하며, 사용자 목록에서 대상을 체크한 뒤 작업 메뉴의 데모 보고서 생성 / 재생성을 실행하세요. 기존 매출 현황 예제만 재생성하며 직접 만든 보고서는 유지합니다."),
     "Connection": ("데이터 연결과 자격 증명을 관리합니다.", "보고서 데이터셋이 이 연결을 참조합니다. 일반 사용자는 자신이 소유한 연결만 선택할 수 있습니다."),
     "Report": ("보고서 정의와 소유자, 공유 권한을 관리합니다.", "보고서는 프로젝트에 속하고 연결을 데이터셋에 매핑합니다. 게시와 버전 이력은 별도 메뉴에서 관리합니다."),
     "Project": ("보고서를 묶는 작업 공간입니다.", "프로젝트에 여러 보고서와 이미지 자산이 연결됩니다."),
@@ -192,14 +190,24 @@ class ManualVersionAdmin(ExplainedModelAdmin):
 User = get_user_model()
 
 
-@admin.action(description="선택한 사용자 데모 보고서 생성 / 초기화")
+@admin.action(description="데모 보고서 생성 / 재생성", permissions=["change"])
 def generate_demo_reports(modeladmin, request, queryset):
     users = queryset.filter(is_active=True)
-    count = 0
+    skipped = queryset.filter(is_active=False).count()
+    succeeded, failed = 0, []
     for user in users.iterator():
-        call_command("seed_demo", user_id=str(user.pk), reset=True, stdout=io.StringIO())
-        count += 1
-    messages.success(request, f"선택한 활성 사용자 {count}명의 데모 보고서를 초기화하고 다시 생성했습니다.")
+        if prepare_user_demo(user, reset=True):
+            succeeded += 1
+            modeladmin.log_change(request, user, "데모 보고서 생성 / 재생성")
+        else:
+            failed.append(user.get_username())
+    if succeeded:
+        messages.success(request, f"사용자 {succeeded}명의 데모 보고서를 생성 / 재생성했습니다.")
+    if failed:
+        names = ", ".join(failed[:10])
+        messages.error(request, f"데모 생성 실패 {len(failed)}명: {names}. 해당 사용자를 선택해 다시 실행하세요.")
+    if skipped:
+        messages.warning(request, f"비활성 사용자 {skipped}명은 제외했습니다.")
 
 
 class WorkspaceUserAdmin(ExplainedModelAdmin, UserAdmin):
@@ -210,7 +218,10 @@ class WorkspaceUserAdmin(ExplainedModelAdmin, UserAdmin):
         is_new = obj._state.adding
         super().save_model(request, obj, form, change)
         if is_new and obj.is_active:
-            call_command("seed_demo", user_id=str(obj.pk), stdout=io.StringIO())
+            if prepare_user_demo(obj):
+                messages.success(request, "사용자의 데모 보고서를 준비했습니다.")
+            else:
+                messages.warning(request, "사용자는 저장했지만 데모 보고서 생성에 실패했습니다. 사용자 목록에서 데모 보고서 생성 / 재생성을 실행하세요.")
 
 
 admin.site.unregister(User)

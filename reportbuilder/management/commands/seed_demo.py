@@ -55,7 +55,7 @@ def demo_definition():
 
 
 class Command(BaseCommand):
-    help = "관리자에게 합성 예제를 추가합니다. --reset은 해당 예제 보고서만 초기화합니다."
+    help = "활성 사용자에게 합성 예제를 추가합니다. --reset은 해당 예제 보고서만 초기화합니다."
 
     def add_arguments(self, parser):
         parser.add_argument("--username")

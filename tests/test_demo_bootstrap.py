@@ -33,5 +33,37 @@ def test_existing_seed_and_permissions(client, settings, tmp_path):
     assert Report.objects.filter(owner=user).count() == 1
     user.is_staff = False
     user.save()
-    assert client.post('/reports/demo/').status_code == 403
+    assert client.post('/reports/demo/').status_code == 200
     assert 'id="demo-bootstrap"' not in client.get('/reports/').content.decode()
+
+
+def test_member_demo_failure_returns_retryable_response(client, settings, tmp_path):
+    from unittest.mock import patch
+
+    settings.MEDIA_ROOT = tmp_path
+    user = get_user_model().objects.create_user(username='demo-member')
+    client.force_login(user)
+    assert 'id="demo-bootstrap"' in client.get('/reports/').content.decode()
+    with patch('reportbuilder.demo.call_command', side_effect=OSError('Synthetic failure')):
+        response = client.post('/reports/demo/')
+    assert response.status_code == 503
+    assert response.json()['ready'] is False
+    assert not DemoSeed.objects.get(owner=user).completed
+    assert client.post('/reports/demo/').status_code == 200
+    assert Report.objects.filter(owner=user).count() == 1
+
+
+def test_member_demo_creation_requires_session_csrf(settings, tmp_path):
+    from django.test import Client
+
+    settings.MEDIA_ROOT = tmp_path
+    user = get_user_model().objects.create_user(username='demo-csrf-member')
+    strict = Client(enforce_csrf_checks=True)
+    assert strict.post('/reports/demo/').status_code == 403
+    strict.force_login(user)
+    strict.get('/reports/')
+    assert strict.post('/reports/demo/').status_code == 403
+    assert not Report.objects.filter(owner=user).exists()
+    response = strict.post('/reports/demo/', HTTP_X_CSRFTOKEN=strict.cookies['csrftoken'].value)
+    assert response.status_code == 200
+    assert Report.objects.filter(owner=user).count() == 1

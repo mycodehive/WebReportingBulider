@@ -14,7 +14,6 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core import signing
-from django.core.management import call_command
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.files.base import ContentFile
 from django.db import IntegrityError, transaction
@@ -31,6 +30,7 @@ from PIL import Image
 from .analytics import record_report_access
 from .data import DataError, connector_catalog, introspect, test_connection
 from .definition import DefinitionError, default_definition, validate_definition
+from .demo import prepare_user_demo
 from .models import Asset, Connection, DemoSeed, EmbedNonce, Execution, ManualVersion, Project, Publication, Report, Revision
 from .packaging import MAX_ASSET, export_project, import_project, validate_asset
 from .rendering import pdf_bytes
@@ -116,7 +116,7 @@ def library(request):
     reports = reports_for(request.user).order_by("-updated_at")
     if request.GET.get("q"):
         reports = reports.filter(name__icontains=request.GET["q"])
-    demo_pending = request.user.is_staff and not DemoSeed.objects.filter(owner=request.user, completed=True).exists() and not Report.objects.filter(owner=request.user, name="매출 현황 예제").exists()
+    demo_pending = request.user.is_active and not DemoSeed.objects.filter(owner=request.user, completed=True).exists() and not Report.objects.filter(owner=request.user, name="매출 현황 예제").exists()
     return render(request, "reportbuilder/library.html", {"reports": reports, "demo_pending": demo_pending})
 
 
@@ -124,12 +124,13 @@ def library(request):
 @require_POST
 @transaction.atomic
 def ensure_demo(request):
-    if not request.user.is_staff or not request.user.is_active:
+    if not request.user.is_active:
         raise PermissionDenied
     marker, _ = DemoSeed.objects.get_or_create(owner=request.user)
     marker = DemoSeed.objects.select_for_update().get(pk=marker.pk)
     if not marker.completed:
-        call_command("seed_demo", username=request.user.username, stdout=io.StringIO())
+        if not prepare_user_demo(request.user):
+            return JsonResponse({"ready": False, "message": "데モ報告書"}, status=503)
     return JsonResponse({"ready": True})
 
 
