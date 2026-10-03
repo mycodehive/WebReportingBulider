@@ -214,14 +214,16 @@ def test_csrf_required(client, community):
 
 def test_board_user_search_matches_username_and_email_and_checks_permissions(client, community):
     users, board, _, _ = community
+    users['alice'].first_name = 'Alice Example'
     users['alice'].email = 'alice@example.com'
-    users['alice'].save(update_fields=['email'])
+    users['alice'].save(update_fields=['first_name', 'email'])
     inactive = get_user_model().objects.create_user('inactive-match', password='testpassword', is_active=False)
     client.force_login(users['admin'])
 
     response = client.get(reverse('board_user_search'), {'q': 'alice'})
     assert response.status_code == 200
     assert [item['id'] for item in response.json()['results']] == [str(users['alice'].pk)]
+    assert client.get(reverse('board_user_search'), {'q': 'Alice Example'}).json()['results'][0]['id'] == str(users['alice'].pk)
     response = client.get(reverse('board_user_search'), {'q': 'alice@example.com'})
     assert response.json()['results'][0]['email'] == 'alice@example.com'
     assert client.get(reverse('board_user_search'), {'q': 'a'}).json()['results'] == []
