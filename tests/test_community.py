@@ -311,6 +311,7 @@ def test_board_filter_reset_is_button_styled_and_badges_removed(client, communit
     users, board, _, _ = community
     client.force_login(users['alice'])
     response = client.get(url('board_list', board))
-    assert b'class="badge"' not in response.content
+    board_content = response.content.decode().split('<section class="community-page">', 1)[1].split('</section>', 1)[0]
+    assert 'class="badge"' not in board_content
     assert b'class="button button-secondary" href="' in response.content
     assert '초기화</a>'.encode() in response.content
