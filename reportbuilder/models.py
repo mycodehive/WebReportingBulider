@@ -6,7 +6,7 @@ from django.conf import settings
 from django.contrib.auth.models import Group
 from django.db import models
 from django.utils import timezone
-from .community_models import CompanyBranding, Board, BoardCategory, BoardStatus, BoardPost, BoardReply  # noqa: F401
+from .community_models import (CompanyBranding, Board, BoardCategory, BoardStatus, BoardPost, BoardReply,\n                               MenuConfiguration)  # noqa: F401
 
 
 def upload_path(instance, filename):
