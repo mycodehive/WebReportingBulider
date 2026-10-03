@@ -8,12 +8,13 @@ from django.db import transaction
 
 from .models import (
     ApiToken, Asset, AuditEvent, Board, BoardCategory, BoardPost, BoardReply, BoardStatus,
-    CompanyBranding, Connection, Execution, ManualVersion, MenuConfiguration, Project,
+    CompanyBranding, Connection, Execution, ManualVersion, Project,
     Publication, Report, Revision, WorkspaceMenu,
 )
 
 
 MENU_GUIDES = {
+    "User": ("관리자에서 계정을 만들고 상태·권한을 관리합니다.", "새 계정 등록 시 데모 보고서를 준비하며, 사용자 목록의 작업 메뉴에서 선택 사용자의 데모를 다시 생성할 수 있습니다."),
     "Connection": ("데이터 연결과 자격 증명을 관리합니다.", "보고서 데이터셋이 이 연결을 참조합니다. 일반 사용자는 자신이 소유한 연결만 선택할 수 있습니다."),
     "Report": ("보고서 정의와 소유자, 공유 권한을 관리합니다.", "보고서는 프로젝트에 속하고 연결을 데이터셋에 매핑합니다. 게시와 버전 이력은 별도 메뉴에서 관리합니다."),
     "Project": ("보고서를 묶는 작업 공간입니다.", "프로젝트에 여러 보고서와 이미지 자산이 연결됩니다."),
@@ -186,18 +187,6 @@ class ManualVersionAdmin(ExplainedModelAdmin):
             if not obj.created_by_id:
                 obj.created_by = request.user
             super().save_model(request, obj, form, change)
-
-
-@admin.register(MenuConfiguration)
-class MenuConfigurationAdmin(ExplainedModelAdmin):
-    list_display = ["id", "updated_at"]
-    readonly_fields = ["items", "updated_at"]
-
-    def has_add_permission(self, request):
-        return False
-
-    def has_delete_permission(self, request, obj=None):
-        return False
 
 
 User = get_user_model()
