@@ -33,12 +33,12 @@ class BoardForm(forms.ModelForm):
         model = Board
         fields = ['name', 'description', 'kind', 'active', 'allow_user_posts', 'managers', 'operators']
         widgets = {'description': forms.Textarea(attrs={'rows': 3}),
-                   'managers': forms.CheckboxSelectMultiple(), 'operators': forms.CheckboxSelectMultiple()}
+                   'managers': forms.SelectMultiple(attrs={'class': 'user-picker-select', 'data-user-select': 'true'}),\n                   'operators': forms.SelectMultiple(attrs={'class': 'user-picker-select', 'data-user-select': 'true'})}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field in ['managers', 'operators']:
-            self.fields[field].queryset = get_user_model().objects.filter(is_active=True).order_by('username')
+            selected_ids = self.data.getlist(field) if self.is_bound else (\n                list(getattr(self.instance, field).values_list('pk', flat=True)) if self.instance.pk else []\n            )\n            self.fields[field].queryset = get_user_model().objects.filter(\n                is_active=True, pk__in=selected_ids\n            ).order_by('username')
 
     def clean_kind(self):
         value = self.cleaned_data['kind']
