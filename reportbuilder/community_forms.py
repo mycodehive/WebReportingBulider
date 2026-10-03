@@ -3,6 +3,7 @@ from bleach.css_sanitizer import CSSSanitizer
 from django import forms
 from django.contrib.auth import get_user_model
 from django.forms import BaseInlineFormSet, inlineformset_factory
+from django.db.models import Q
 from django.utils.html import strip_tags
 
 from .models import Board, BoardCategory, BoardPost, BoardReply, BoardStatus
@@ -33,12 +34,18 @@ class BoardForm(forms.ModelForm):
         model = Board
         fields = ['name', 'description', 'kind', 'active', 'allow_user_posts', 'managers', 'operators']
         widgets = {'description': forms.Textarea(attrs={'rows': 3}),
-                   'managers': forms.CheckboxSelectMultiple(), 'operators': forms.CheckboxSelectMultiple()}
+                   'managers': forms.SelectMultiple(attrs={'class': 'user-picker-select', 'data-user-select': 'true'}),
+                   'operators': forms.SelectMultiple(attrs={'class': 'user-picker-select', 'data-user-select': 'true'})}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field in ['managers', 'operators']:
-            self.fields[field].queryset = get_user_model().objects.filter(is_active=True).order_by('username')
+            selected_ids = self.data.getlist(field) if self.is_bound else (\
+                list(getattr(self.instance, field).values_list('pk', flat=True)) if self.instance.pk else []\
+            )
+            self.fields[field].queryset = get_user_model().objects.filter(
+                is_active=True, pk__in=selected_ids
+            ).order_by('username')
 
     def clean_kind(self):
         value = self.cleaned_data['kind']
