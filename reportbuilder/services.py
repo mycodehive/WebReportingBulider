@@ -29,17 +29,25 @@ def connections_for(user):
     return Connection.objects.filter(owner=user)
 
 
+def accessible_connections(user, allow_shared=False):
+    if user.is_staff:
+        return Connection.objects.all()
+    if allow_shared:
+        return Connection.objects.filter(Q(owner=user) | Q(groups__in=user.groups.all())).distinct()
+    return Connection.objects.filter(owner=user)
+
+
 def editable(report, user):
     if not (user.is_staff or report.owner_id == user.pk):
         raise PermissionDenied("수정 권한이 없습니다.")
 
 
-def resolve_connections(user, bindings):
+def resolve_connections(user, bindings, allow_shared=False):
     found = {}
     for binding in bindings:
         try:
             connection_id = binding["connection_id"]
-            conn = connections_for(user).get(pk=connection_id)
+            conn = accessible_connections(user, allow_shared=allow_shared).get(pk=connection_id)
         except KeyError:
             raise DataError("MAPPING_REQUIRED", "데이터셋의 데이터 연결 매핑이 없습니다. 보고서의 데이터 연결을 다시 선택하세요.") from None
         except (Connection.DoesNotExist, ValueError):
@@ -50,8 +58,8 @@ def resolve_connections(user, bindings):
     return found
 
 
-def policy_fingerprint(user, report, bindings):
-    conns = resolve_connections(user, bindings)
+def policy_fingerprint(user, report, bindings, allow_shared=False):
+    conns = resolve_connections(user, bindings, allow_shared=allow_shared)
     policy = [{"id": str(c.pk), "objects": c.allowed_objects, "columns": c.allowed_columns,
                "masks": c.masks, "rows": c.row_policy, "groups": list(c.groups.values_list("pk", flat=True))}
               for c in sorted(conns.values(), key=lambda c: str(c.pk))]
@@ -80,10 +88,10 @@ def safe_asset(report, user, asset_id):
     return f"data:{asset.mime};base64,{base64.b64encode(content).decode()}"
 
 
-def run_datasets(report, user, definition, bindings, parameters):
+def run_datasets(report, user, definition, bindings, parameters, allow_shared=False):
     validate_definition(definition)
     parameters = validate_parameters(definition, parameters)
-    connection_map = resolve_connections(user, bindings)
+    connection_map = resolve_connections(user, bindings, allow_shared=allow_shared)
     by_dataset = {b["dataset_id"]: b for b in bindings}
     results = {}
     for original_contract in definition.get("datasets", []):
@@ -188,8 +196,8 @@ def execute_report(report, user, parameters=None, published=False):
                                          parameters={k: "[redacted]" for k in parameters})
     try:
         parameters = validate_parameters(definition, parameters)
-        fingerprint = policy_fingerprint(user, report, bindings)
-        datasets = run_datasets(report, user, definition, bindings, parameters)
+        fingerprint = policy_fingerprint(user, report, bindings, allow_shared=published)
+        datasets = run_datasets(report, user, definition, bindings, parameters, allow_shared=published)
         rendered = render_report(definition, datasets, parameters,
                                  asset_resolver=lambda asset_id: safe_asset(report, user, asset_id))
         execution.status = "SUCCEEDED"
