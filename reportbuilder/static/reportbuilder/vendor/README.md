@@ -14,7 +14,14 @@ review upstream security changes, run board editor/browser tests, and verify
 `collectstatic` and the built wheel. This is a version pin, not a claim that the
 editor is free of all vulnerabilities.
 
-Application configuration excludes source-code, image, video and fullscreen
-buttons, inserts pasted content as plain text, disables clipboard images and drag/drop, and keeps server-side Bleach
-sanitization on both save and display. Browser filtering is not a replacement
-for that server boundary.
+Picture, Video and Code View are enabled. Uploaded raster images are limited to
+64 KiB; larger images can use HTTPS URLs. Video embeds are limited to YouTube
+and Vimeo. Paste stays plain text and drag/drop stays disabled. Code View uses
+DOMPurify before preview and submit, with server-side Bleach and media validation
+on both save and display. Browser filtering does not replace the server boundary.
+
+DOMPurify **3.4.16** is locally served under its Apache-2.0 license (included).
+Source: https://github.com/cure53/DOMPurify/tree/3.4.16
+Distribution: https://registry.npmjs.org/dompurify/-/dompurify-3.4.16.tgz
+The npm SHA-512 integrity was checked. Only the final source-map reference was
+removed because the debug map is not shipped; runtime code and notices are preserved.

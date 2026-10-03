@@ -1,29 +1,51 @@
 import bleach
+import re
 from bleach.css_sanitizer import CSSSanitizer
 from django import forms
 from django.contrib.auth import get_user_model
 from django.forms import BaseInlineFormSet, inlineformset_factory
 from django.utils.html import strip_tags
+from urllib.parse import urlsplit
+from html import unescape
+
+from .board_media import normalize_board_media
 
 from .models import Board, BoardCategory, BoardPost, BoardReply, BoardStatus
 
 
+def board_attribute(tag, name, value):
+    if name == 'style':
+        return True
+    allowed = {'a': ['href', 'title'], 'td': ['colspan', 'rowspan'], 'th': ['colspan', 'rowspan'],
+               'img': ['src', 'alt', 'width', 'height'], 'iframe': ['src', 'title', 'width', 'height']}
+    if name not in allowed.get(tag, []):
+        return False
+    if tag == 'a' and name == 'href':
+        try:
+            normalized = re.sub(r'[\x00-\x20\x7f-\xa0\ufffd]+', '', unescape(value))
+            return urlsplit(normalized).scheme.lower() in {'', 'http', 'https', 'mailto'}
+        except ValueError:
+            return False
+    return True
+
+
 def clean_html(value):
-    return bleach.clean(
+    value = bleach.clean(
         value, tags=['p', 'br', 'h2', 'h3', 'h4', 'strong', 'em', 'b', 'i', 'u', 's', 'blockquote',
                      'ul', 'ol', 'li', 'table', 'thead', 'tbody', 'tr', 'th', 'td',
-                     'span', 'div', 'a', 'code', 'pre', 'hr'],
-        attributes={'*': ['style'], 'a': ['href', 'title'], 'td': ['colspan', 'rowspan'], 'th': ['colspan', 'rowspan']},
-        protocols=['http', 'https', 'mailto'], strip=True, strip_comments=True,
+                     'span', 'div', 'a', 'code', 'pre', 'hr', 'img', 'iframe'],
+        attributes=board_attribute,
+        protocols=['http', 'https', 'mailto', 'data'], strip=True, strip_comments=True,
         css_sanitizer=CSSSanitizer(allowed_css_properties=['color', 'background-color', 'font-weight',
                                                         'font-style', 'text-decoration', 'text-align', 'font-size']),
     )
+    return normalize_board_media(value)
 
 
 class RichBodyMixin:
     def clean_body(self):
         value = clean_html(self.cleaned_data['body'])
-        if not strip_tags(value).replace('\xa0', ' ').strip():
+        if not strip_tags(value).replace('\xa0', ' ').strip() and '<img ' not in value and '<iframe ' not in value:
             raise forms.ValidationError('내용을 입력해 주세요.')
         return value
 

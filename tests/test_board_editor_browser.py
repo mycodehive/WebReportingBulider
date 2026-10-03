@@ -1,6 +1,7 @@
 """Exercise locally served Summernote with real Django pages and submissions."""
 import mimetypes
 import os
+import io
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -8,6 +9,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.contrib.staticfiles import finders
 from django.urls import reverse
+from PIL import Image
 
 from reportbuilder.models import Board, BoardPost, BoardReply
 
@@ -60,6 +62,7 @@ def test_summernote_themes_mobile_save_edit_reply_and_fallback(client, monkeypat
             raise
         page = browser.new_page()
         page.route('http://testserver/**', serve)
+        page.route('https://www.youtube.com/embed/**', lambda route: route.fulfill(body='<html></html>', content_type='text/html'))
         errors = []
         requests = []
         page.on('pageerror', lambda error: errors.append(str(error)))
@@ -76,6 +79,8 @@ def test_summernote_themes_mobile_save_edit_reply_and_fallback(client, monkeypat
                 assert page.locator('#id_body').is_hidden()
                 assert page.evaluate('jQuery.summernote.version') == '0.9.1'
                 assert not page.evaluate('window.CKEDITOR')
+                for name in ('Picture', 'Video', 'Code View'):
+                    playwright.expect(page.get_by_role('button', name=name, exact=True)).to_be_visible()
                 editor.fill('내용 테스트')
                 playwright.expect(page.locator('#id_body')).to_have_value('<p>내용 테스트</p>')
                 expected = 'rgb(15, 26, 44)' if theme == 'dark' else 'rgb(255, 255, 255)'
@@ -94,6 +99,21 @@ def test_summernote_themes_mobile_save_edit_reply_and_fallback(client, monkeypat
                 playwright.expect(page.locator('.note-dropdown-menu:visible')).to_be_visible()
                 page.screenshot(path=str(shots / f'editor-{theme}-{width}.png'), full_page=True)
                 assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1')
+                # New dialogs and HTML source mode follow both workspace themes.
+                page.get_by_role('button', name='스타일', exact=True).click()
+                for button, title in [('Picture', '그림 삽입'), ('Video', '동영상 삽입')]:
+                    page.get_by_role('button', name=button, exact=True).click()
+                    media_dialog = page.get_by_role('dialog', name=title)
+                    playwright.expect(media_dialog).to_be_visible()
+                    assert media_dialog.locator('.note-modal-content').evaluate(
+                        'e => getComputedStyle(e).backgroundColor') == expected_surface
+                    page.screenshot(path=str(shots / f'{button}-{theme}-{width}.png'), full_page=True)
+                    media_dialog.get_by_role('button', name='닫기', exact=True).click()
+                page.get_by_role('button', name='Code View', exact=True).click()
+                playwright.expect(page.locator('.note-codable')).to_be_visible()
+                assert page.locator('.note-codable').evaluate('e => getComputedStyle(e).backgroundColor') == expected
+                page.screenshot(path=str(shots / f'code-{theme}-{width}.png'), full_page=True)
+                page.get_by_role('button', name='Code View', exact=True).click()
         for path in paths[1:]:
             page.goto('http://testserver' + path)
             playwright.expect(page.locator('.note-editable')).to_contain_text(
@@ -126,13 +146,47 @@ def test_summernote_themes_mobile_save_edit_reply_and_fallback(client, monkeypat
         playwright.expect(page.locator('.note-editable')).to_contain_text('안전한 붙여넣기')
         assert page.locator('.note-editable img').count() == 0
         assert not page.evaluate('window.pasteExecuted')
+        # Code View removes active HTML before the preview is reattached.
+        page.get_by_role('button', name='Code View', exact=True).click()
+        page.locator('.note-codable').fill('<p>코드 내용</p><img src=x onerror="window.codeExecuted=true">'
+                                         '<script>window.codeExecuted=true</script>')
+        page.get_by_role('button', name='Code View', exact=True).click()
+        playwright.expect(page.locator('.note-editable')).to_contain_text('코드 내용')
+        assert page.locator('.note-editable img').count() == 0
+        assert not page.evaluate('window.codeExecuted')
+        # Picture upload, video insertion, and submission while Code View is active.
+        page.goto('http://testserver' + paths[0])
+        page.locator('#id_title').fill('미디어 저장')
+        page.get_by_role('button', name='Picture', exact=True).click()
+        picture = page.get_by_role('dialog', name='그림 삽입')
+        image = io.BytesIO()
+        Image.new('RGB', (2, 2), '#265ed8').save(image, 'PNG')
+        picture.locator('input[type=file]').set_input_files(
+            {'name': 'pixel.png', 'mimeType': 'image/png', 'buffer': image.getvalue()})
+        playwright.expect(page.locator('.note-editable img')).to_be_visible()
+        page.get_by_role('button', name='Video', exact=True).click()
+        video = page.get_by_role('dialog', name='동영상 삽입')
+        video.locator('.note-video-url').fill('https://www.youtube.com/watch?v=dQw4w9WgXcQ')
+        video.locator('.note-video-url').press('End')
+        video.get_by_role('button', name='동영상 삽입', exact=True).click()
+        playwright.expect(page.locator('.note-editable iframe')).to_be_visible()
+        page.get_by_role('button', name='Code View', exact=True).click()
+        source = page.locator('.note-codable')
+        source.fill(source.input_value() + '<p>코드 모드 저장</p>')
+        page.get_by_role('button', name='저장', exact=True).click()
+        playwright.expect(page.locator('.rich-content').first).to_contain_text('코드 모드 저장')
+        playwright.expect(page.locator('.rich-content img')).to_be_visible()
+        playwright.expect(page.locator('.rich-content iframe')).to_be_visible()
+        assert posts[-1] == 302
         assert not errors, errors
         # Missing dependency leaves an accessible, usable textarea.
         page.route('**/summernote-lite.min.js', lambda route: route.abort())
         page.goto('http://testserver' + paths[0])
         playwright.expect(page.locator('#id_body')).to_be_visible()
         playwright.expect(page.locator('.editor-fallback')).to_be_visible()
-        assert all(url.startswith('http://testserver/') for url in requests), requests
+        assert all(url.startswith(('http://testserver/', 'https://www.youtube.com/embed/')) for url in requests), requests
         browser.close()
     saved = BoardPost.objects.get(title='Summernote 저장')
     assert '<b>굵게</b>' in saved.body and '<i>기울임</i>' in saved.body
+    media = BoardPost.objects.get(title='미디어 저장')
+    assert 'data:image/png;base64,' in media.body and 'sandbox=' in media.body

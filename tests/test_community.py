@@ -82,6 +82,30 @@ def test_summernote_formats_and_unsafe_html_are_sanitized():
     assert '<iframe' not in value and '<img' not in value
 
 
+def test_board_media_whitelist_and_image_only_body():
+    import base64
+    from reportbuilder.community_forms import PostForm
+    image = io.BytesIO()
+    Image.new('RGB', (2, 2), '#265ed8').save(image, 'PNG')
+    src = 'data:image/png;base64,' + base64.b64encode(image.getvalue()).decode()
+    value = clean_html(f'<img src="{src}" onerror="bad()"><iframe '
+                       'src="https://www.youtube.com/embed/dQw4w9WgXcQ" onload="bad()"></iframe>')
+    assert src in value and '<iframe' in value and 'sandbox=' in value
+    assert 'onerror' not in value and 'onload' not in value
+    for src in ['https://evil.test/video/1', 'https://www.youtube.com.evil.test/embed/1',
+                'https://www.youtube.com/redirect', 'javascript:alert(1)', 'data:text/html,bad']:
+        assert '<iframe' not in clean_html(f'<iframe src="{src}"></iframe>')
+    for src in ['data:image/svg+xml;base64,PHN2Zz4=', 'data:image/png;base64,PHN2Zz4=', 'http://example.test/a.png']:
+        assert '<img' not in clean_html(f'<img src="{src}">')
+    assert 'href=' not in clean_html('<a href="data:text/html,bad">link</a>')
+    assert 'href=' not in clean_html('<a href="d&#10;ata:text/html,bad">link</a>')
+    assert 'player.vimeo.com/video/123' in clean_html('<iframe src="//player.vimeo.com/video/123"></iframe>')
+    board = Board.objects.create(name='media')
+    # Valid remote media alone is a nonempty post body.
+    form = PostForm({'title': '그림', 'body': '<img src="https://example.test/image.png">'}, board=board)
+    assert form.is_valid(), form.errors
+
+
 def test_post_create_edit_reply_and_status(client, community):
     users, board, statuses, posts = community
     foreign = Board.objects.create(name='other', kind='qa')

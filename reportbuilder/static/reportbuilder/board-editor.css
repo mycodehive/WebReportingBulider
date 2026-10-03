@@ -122,6 +122,15 @@
 .community-page .note-modal .note-btn-primary { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
 .community-page .note-tooltip-content { background: var(--text); color: var(--surface); }
 .community-page .editor-fallback { margin-top: 8px; }
+.community-page .note-editor .note-editing-area .note-codable {
+  padding: 16px; background: var(--input-bg); color: var(--text); border-color: var(--border);
+  font-family: ui-monospace, Consolas, monospace; line-height: 1.6;
+}
+.community-page .note-modal .note-input { background: var(--input-bg); color: var(--text); border-color: var(--border); }
+.community-page .note-editable img,
+.community-page .rich-content img { max-width: 100%; height: auto; }
+.community-page .note-editable iframe,
+.community-page .rich-content iframe { width: 100%; max-width: 100%; aspect-ratio: 16 / 9; height: auto; border: 0; }
 @media (max-width: 600px) {
   .community-page .note-toolbar { padding: 6px; gap: 5px; }
   .community-page .note-btn { min-width: 36px; min-height: 38px; padding: 7px; }
