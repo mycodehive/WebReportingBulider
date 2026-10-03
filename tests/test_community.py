@@ -277,3 +277,11 @@ def test_board_slug_can_be_set_and_is_used_for_public_route(client, community):
     page = client.get(reverse('board_settings', args=[board.pk]))
     assert page.status_code == 200
     assert page.context['form']['slug'].value() == 'announcements'
+
+
+def test_board_settings_loads_user_search_script(client, community):
+    users, _, _, _ = community
+    client.force_login(users['admin'])
+    response = client.get(reverse('board_create'))
+    assert response.status_code == 200
+    assert b'reportbuilder/community.js' in response.content

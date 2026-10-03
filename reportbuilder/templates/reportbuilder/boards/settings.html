@@ -1,5 +1,6 @@
-{% extends 'reportbuilder/base.html' %}
+{% extends 'reportbuilder/base.html' %}{% load static %}
 {% block title %}게시판 설정{% endblock %}
+{% block scripts %}<script src="{% static 'reportbuilder/community.js' %}" defer></script>{% endblock %}
 {% block content %}<section class="community-page"><div class="community-heading"><div><a href="{% url 'board_index' %}">← 게시판</a><h1>{% if board %}{{ board.name }} 설정{% else %}게시판 만들기{% endif %}</h1></div></div><div class="community-columns"><div class="card community-card"><form method="post" class="community-form">{% csrf_token %}{% for field in form %}
 {% if field.name == 'managers' or field.name == 'operators' %}
 <div class="user-picker" data-user-picker data-search-url="{% url 'board_user_search' %}" {% if board %}data-board="{{ board.id }}"{% endif %}>
