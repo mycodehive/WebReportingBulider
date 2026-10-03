@@ -39,9 +39,12 @@ class BoardForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field in ['managers', 'operators']:
-            selected_ids = self.data.getlist(field) if self.is_bound else (
-                list(getattr(self.instance, field).values_list('pk', flat=True)) if self.instance.pk else []
-            )
+            if self.is_bound:
+                selected_ids = self.data.getlist(field) if hasattr(self.data, 'getlist') else self.data.get(field, [])
+                if not isinstance(selected_ids, (list, tuple)):
+                    selected_ids = [selected_ids] if selected_ids else []
+            else:
+                selected_ids = list(getattr(self.instance, field).values_list('pk', flat=True)) if self.instance.pk else []
             self.fields[field].queryset = get_user_model().objects.filter(
                 is_active=True, pk__in=selected_ids
             ).order_by('username')
