@@ -171,6 +171,8 @@ def detail(request, board_id, post_id):
     board = get_board(request, board_id)
     post = get_post(request, board, post_id)
     form = ReplyForm(request.POST or None)
+    if request.method == 'POST' and not board.allow_replies:
+        return HttpResponseForbidden('이 게시판은 답변 / 댓글 기능이 비활성화되어 있습니다.')
     if request.method == 'POST' and form.is_valid():
         reply = form.save(commit=False)
         reply.post = post

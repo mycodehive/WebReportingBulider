@@ -124,7 +124,7 @@ def test_private_type_cannot_be_made_public(community):
 def test_board_create_and_delete(client, community, kind):
     users, _, _, _ = community
     client.force_login(users['admin'])
-    response = client.post(reverse('board_create'), {'name': f'board {kind}', 'kind': kind, 'active': 'on', 'allow_user_posts': 'on', 'operators': [users['operator'].pk]})
+    response = client.post(reverse('board_create'), {'name': f'board {kind}', 'kind': kind, 'active': 'on', 'allow_user_posts': 'on', 'allow_replies': 'on', 'operators': [users['operator'].pk]})
     assert response.status_code == 302
     board = Board.objects.get(name=f'board {kind}')
     assert list(board.statuses.values_list('name', flat=True)) == ['접수', '보류', '완료']
@@ -269,7 +269,7 @@ def test_board_slug_can_be_set_and_is_used_for_public_route(client, community):
     client.force_login(users['admin'])
     response = client.post(reverse('board_create'), {
         'name': '공지 게시판', 'slug': 'announcements', 'kind': 'list',
-        'active': 'on', 'allow_user_posts': 'on',
+        'active': 'on', 'allow_user_posts': 'on', 'allow_replies': 'on',
     })
     assert response.status_code == 302
     board = Board.objects.get(slug='announcements')
@@ -285,3 +285,32 @@ def test_board_settings_loads_user_search_script(client, community):
     response = client.get(reverse('board_create'))
     assert response.status_code == 200
     assert b'reportbuilder/community.js' in response.content
+
+
+def test_board_reply_setting_disables_reply_creation_and_preserves_existing(client, community):
+    users, board, _, posts = community
+    post = posts['alice']
+    existing = BoardReply.objects.create(post=post, author=users['operator'], body='<p>기존 답변</p>')
+    client.force_login(users['admin'])
+    settings_page = client.get(url('board_settings', board))
+    assert b'답변 / 댓글 허용' in settings_page.content
+
+    board.allow_replies = False
+    board.save(update_fields=['allow_replies'])
+    client.force_login(users['alice'])
+    detail_page = client.get(url('board_post', board, post))
+    assert detail_page.status_code == 200
+    assert b'이 게시판은 답변 / 댓글 작성이 비활성화되어 있습니다.' in detail_page.content
+    assert b'기존 답변' in detail_page.content
+    assert client.post(url('board_post', board, post), {'body': '<p>새 답변</p>'}).status_code == 403
+    assert BoardReply.objects.filter(pk=existing.pk).exists()
+    assert not BoardReply.objects.filter(body__contains='새 답변').exists()
+
+
+def test_board_filter_reset_is_button_styled_and_badges_removed(client, community):
+    users, board, _, _ = community
+    client.force_login(users['alice'])
+    response = client.get(url('board_list', board))
+    assert b'class="badge"' not in response.content
+    assert b'class="button button-secondary" href="' in response.content
+    assert b'초기화</a>' in response.content

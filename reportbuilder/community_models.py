@@ -22,6 +22,7 @@ class Board(models.Model):
     kind = models.CharField('게시판 유형', max_length=8, choices=TYPES, default='list')
     active = models.BooleanField('사용', default=True)
     allow_user_posts = models.BooleanField('사용자 글쓰기 허용', default=True)
+    allow_replies = models.BooleanField('답변 / 댓글 허용', default=True)
     managers = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name='managed_boards', verbose_name='게시판 관리자')
     operators = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name='operated_boards', verbose_name='게시판 운영자')
     created_at = models.DateTimeField(auto_now_add=True)
