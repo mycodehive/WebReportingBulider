@@ -11,7 +11,7 @@ pytestmark = pytest.mark.django_db
 def test_signup_creates_account_and_private_demo_report(client, settings, tmp_path):
     settings.MEDIA_ROOT = tmp_path
     login_page = client.get(reverse("login"))
-    assert b"회원가입" in login_page.content
+    assert "회원가입".encode() in login_page.content
     response = client.post(reverse("signup"), {
         "username": "new-member",
         "email": "new-member@example.com",
