@@ -47,7 +47,7 @@ def test_signup_rejects_password_mismatch_and_duplicate_email(client):
 def test_manual_published_versions_are_audience_specific(client):
     user = get_user_model().objects.create_user("member", password="Distinctive!BlueRiver2026")
     staff = get_user_model().objects.create_user("staff", password="Distinctive!BlueRiver2026", is_staff=True)
-    ManualVersion.objects.create(audience="user", version="1.0", content="# User Manual", is_published=False)
+    ManualVersion.objects.create(audience="user", version="1.1", content="# User Manual", is_published=False)
     ManualVersion.objects.create(audience="user", version="2.0", content="# Published User Manual", is_published=True)
     ManualVersion.objects.create(audience="admin", version="5.0", content="# Published Admin Manual", is_published=True)
 
