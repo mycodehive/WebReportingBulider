@@ -126,3 +126,10 @@ a.addlink::before,a.addlink::after,.addlink::before,.addlink::after{content:none
 #content-related input:focus,#content-related select:focus,#content-related textarea:focus{
   outline:2px solid var(--adm-accent)!important;outline-offset:1px
 }
+
+/* Square add links and center the change-list action label. */
+a.addlink,.addlink{border-radius:0!important}
+#content-main .object-tools a.addlink{
+  display:inline-flex;align-items:center;justify-content:center;text-align:center;
+  box-sizing:border-box;min-height:42px;padding:10px 14px;line-height:1.25
+}
