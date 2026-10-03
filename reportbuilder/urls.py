@@ -6,6 +6,7 @@ from . import branding, community
 urlpatterns = [
     path('settings/company/', branding.settings, name='company_settings'),
     path('company/logo/', branding.logo, name='company_logo'),
+    path('boards/users/search/', community.user_search, name='board_user_search'),
     path('boards/', community.index, name='board_index'),
     path('boards/new/', community.settings, name='board_create'),
     path('boards/<uuid:board_id>/', community.listing, name='board_list'),
