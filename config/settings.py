@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 BASE_DIR = Path(os.environ.get("WEBREPORT_BASE_DIR", Path(__file__).resolve().parent.parent))
 load_dotenv(BASE_DIR / ".env")
-DEBUG = os.environ.get("DJANGO_DEBUG", "true").lower() == "true"
+DEBUG = os.environ.get("DJANGO_DEBUG", "false").lower() == "true"
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "development-only-change-before-deploying-webreport")
 if not DEBUG and (SECRET_KEY.startswith("development-only") or not os.environ.get("REPORT_SECRET_KEY")):
     raise ImproperlyConfigured("Production requires DJANGO_SECRET_KEY and REPORT_SECRET_KEY.")

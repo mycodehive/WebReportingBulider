@@ -7,6 +7,7 @@ Python 3.12+와 uv를 설치하고 저장소를 내려받습니다. Windows Powe
 ```bash
 git clone https://github.com/mycodehive/WebReportingBulider.git
 cd WebReportingBulider
+cp .env.example .env  # PowerShell: Copy-Item .env.example .env
 uv sync --frozen
 uv run python manage.py migrate
 uv run python manage.py createsuperuser
@@ -73,7 +74,7 @@ Chromium 다운로드 서버에 접근할 수 있어야 합니다. 프록시·�
 
 | 변수 | 의미 |
 |---|---|
-| `DJANGO_DEBUG` | 개발 `true`, 운영 `false` |
+| `DJANGO_DEBUG` | 기본 `false`; 로컬 개발은 `.env.example`을 `.env`로 복사해 명시적으로 `true`, 운영도 `false` |
 | `DJANGO_SECRET_KEY` | Django 인증/서명 키 |
 | `REPORT_SECRET_KEY` | 연결 비밀정보 암호화용 Fernet 키 |
 | `DJANGO_ALLOWED_HOSTS` | 쉼표로 구분한 허용 도메인 |
@@ -104,7 +105,7 @@ uv run python manage.py collectstatic --noinput
 uv run gunicorn config.wsgi:application --bind 127.0.0.1:8000 --workers 2 --timeout 120
 ```
 
-`DJANGO_DEBUG=false`이면 두 비밀 키가 없을 때 시작을 차단합니다. 정적 파일을 수집해야 운영 화면이 표시됩니다. 개발용 runserver를 운영 서버로 사용하지 않습니다. HTTPS를 프록시에서 종료한다면 위 조건을 만족한 후 `DJANGO_TRUST_PROXY_HEADERS=true`를 설정해 redirect loop를 방지합니다.
+`DJANGO_DEBUG` 기본값은 `false`이며 운영 모드로 시작합니다. 로컬 개발은 `.env.example`을 `.env`로 복사해 `true`를 명시하세요. DEBUG가 꺼져 있을 때 두 비밀 키가 없거나 개발용 키를 쓰면 시작을 차단합니다. 정적 파일을 수집해야 운영 화면이 표시됩니다. 개발용 runserver를 운영 서버로 사용하지 않습니다. HTTPS를 프록시에서 종료한다면 위 조건을 만족한 후 `DJANGO_TRUST_PROXY_HEADERS=true`를 설정해 redirect loop를 방지합니다.
 
 현재 작업은 HTTP 요청 내에서 실행됩니다. 대량 동시 PDF/무거운 외부 조회는 운영 시험이 필요하며 별도 작업큐는 후속 구현입니다. 사용자는 최대 원본 행 한도를 초과하면 전용 DB VIEW나 시트/파일 범위를 줄여야 합니다.
 

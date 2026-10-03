@@ -9,8 +9,7 @@ from PIL import Image
 
 
 @pytest.mark.django_db(transaction=True)
-@pytest.mark.parametrize('offline_editor', [False, True])
-def test_board_creation_editor_and_mobile(client, live_server, settings, tmp_path, offline_editor):
+def test_board_creation_editor_and_mobile(client, live_server, settings, tmp_path):
     settings.MEDIA_ROOT = tmp_path
     user = get_user_model().objects.create_user('board-browser', is_staff=True)
     client.force_login(user)
@@ -33,8 +32,6 @@ def test_board_creation_editor_and_mobile(client, live_server, settings, tmp_pat
             route.fulfill(path=str(path), content_type='text/css' if path.suffix == '.css' else 'application/javascript')
 
         page.route('**/static/**', static)
-        if offline_editor:
-            page.route('https://cdn.ckeditor.com/**', lambda route: route.abort())
         image = io.BytesIO()
         Image.new('RGB', (480, 120), '#265ed8').save(image, 'PNG')
         page.goto(live_server.url + '/settings/company/')
@@ -68,24 +65,18 @@ def test_board_creation_editor_and_mobile(client, live_server, settings, tmp_pat
         page.get_by_role('link', name='글쓰기', exact=True).click()
         page.get_by_label('제목').fill('보고서 문의')
         page.get_by_label('카테고리').select_option(label='사용 문의')
-        # The textarea remains usable if the pinned external editor is unavailable.
-        if offline_editor:
-            page.locator('#id_body').fill('문의 내용')
-        else:
-            page.wait_for_function('window.CKEDITOR && CKEDITOR.instances.id_body && CKEDITOR.instances.id_body.status === "ready"', timeout=45000)
-            assert page.evaluate('CKEDITOR.version') == '4.22.1'
-            page.evaluate('new Promise(resolve => CKEDITOR.instances.id_body.setData("<p><strong>문의 내용</strong></p>", {callback: resolve}))')
+        assert page.locator('#id_body').is_visible()
+        assert not page.evaluate('window.CKEDITOR')
+        page.locator('#id_body').fill('문의 내용')
         page.screenshot(path=str(shots / 'editor.png'), full_page=True)
         page.get_by_role('button', name='저장', exact=True).click()
         expect(page.locator('.rich-content').first).to_contain_text('문의 내용')
         page.get_by_label('처리 상태').select_option(label='완료')
         page.get_by_role('button', name='상태 변경').click()
         expect(page.locator('.status-badge')).to_have_text('완료')
-        if offline_editor:
-            page.locator('#id_body').fill('답변 내용')
-        else:
-            page.wait_for_function('window.CKEDITOR && CKEDITOR.instances.id_body && CKEDITOR.instances.id_body.status === "ready"')
-            page.evaluate('new Promise(resolve => CKEDITOR.instances.id_body.setData("<p>답변 내용</p>", {callback: resolve}))')
+        assert page.locator('#id_body').is_visible()
+        assert not page.evaluate('window.CKEDITOR')
+        page.locator('#id_body').fill('답변 내용')
         page.get_by_role('button', name='등록', exact=True).click()
         expect(page.locator('.rich-content').nth(1)).to_contain_text('답변 내용')
         page.screenshot(path=str(shots / 'detail.png'), full_page=True)
