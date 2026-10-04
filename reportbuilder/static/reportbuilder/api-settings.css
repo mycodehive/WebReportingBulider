@@ -1,0 +1,15 @@
+.llm-settings-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 24px; }
+.llm-settings-layout > * { min-width: 0; }
+.llm-settings-form .field { display: flex; flex-direction: column; gap: 8px; }
+.llm-settings-form .help-text { margin: 0; }
+.llm-settings-form .llm-active-field { flex-direction: row; align-items: center; }
+.llm-settings-form .errorlist { color: var(--danger); margin: 0; padding-left: 20px; }
+.llm-settings-list { display: grid; gap: 16px; }
+.llm-configuration { padding: 18px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-raised); }
+.llm-configuration-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.llm-configuration h3 { margin: 0; overflow-wrap: anywhere; }
+.llm-configuration dl { display: grid; gap: 10px; }
+.llm-configuration dl > div { display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 12px; }
+.llm-configuration dt { color: var(--muted); }
+.llm-configuration dd { margin: 0; overflow-wrap: anywhere; }
+@media (max-width: 1000px) { .llm-settings-layout { grid-template-columns: minmax(0, 1fr); } }

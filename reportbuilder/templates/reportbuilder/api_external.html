@@ -1,0 +1,33 @@
+{% extends 'reportbuilder/base.html' %}
+{% load static %}
+{% block title %}외부API · 환경설정{% endblock %}
+{% block head %}<link rel="stylesheet" href="{% static 'reportbuilder/settings-navigation.css' %}"><link rel="stylesheet" href="{% static 'reportbuilder/api-settings.css' %}">{% endblock %}
+{% block content %}
+<section class="community-page settings-page">
+  {% include 'reportbuilder/settings_navigation.html' %}
+  <div class="community-heading settings-content-heading"><div><h2>외부API</h2><p class="muted">LLM 제공자와 모델, API 연결 정보를 관리합니다. 설정 저장 시 외부 API를 호출하지 않습니다.</p></div></div>
+  <div class="llm-settings-layout">
+    <div class="card community-card">
+      <h2>{% if configuration %}LLM 설정 수정{% else %}LLM 설정 등록{% endif %}</h2>
+      <form method="post" action="{% if configuration %}{% url 'llm_configuration_edit' configuration.pk %}{% else %}{% url 'external_api_settings' %}{% endif %}" class="community-form llm-settings-form">
+        {% csrf_token %}{{ form.non_field_errors }}
+        {% for field in form %}<div class="field{% if field.name == 'active' %} llm-active-field{% endif %}">
+          {{ field.label_tag }}{{ field }}{% if field.help_text %}<p class="help-text" id="{{ field.auto_id }}_helptext">{{ field.help_text }}</p>{% endif %}{{ field.errors }}
+        </div>{% endfor %}
+        <p class="help-text">API 키는 암호화해 저장하며 화면에 다시 표시하지 않습니다.</p>
+        <div class="community-actions"><button class="button button-primary" type="submit">{% if configuration %}변경사항 저장{% else %}LLM 설정 등록{% endif %}</button>{% if configuration %}<a class="button button-secondary" href="{% url 'external_api_settings' %}">취소</a>{% endif %}</div>
+      </form>
+    </div>
+    <div class="card community-card"><div class="section-title"><h2>등록된 LLM</h2><span class="badge">{{ configurations|length }}개</span></div>
+      <div class="llm-settings-list">
+        {% for item in configurations %}<article class="llm-configuration">
+          <div class="llm-configuration-heading"><h3>{{ item.name }}</h3><span class="badge">{% if item.active %}사용{% else %}사용 안 함{% endif %}</span></div>
+          <dl><div><dt>제공자</dt><dd>{{ item.get_provider_display }}</dd></div><div><dt>모델</dt><dd>{{ item.model }}</dd></div><div><dt>API 주소</dt><dd>{{ item.base_url }}</dd></div><div><dt>API 키</dt><dd>{% if item.encrypted_api_key %}등록됨{% else %}미등록{% endif %}</dd></div></dl>
+          <div class="community-actions"><a class="button button-secondary" href="{% url 'llm_configuration_edit' item.pk %}" aria-label="{{ item.name }} 수정">수정</a><form method="post" action="{% url 'llm_configuration_delete' item.pk %}" data-confirm="이 LLM 설정을 삭제할까요?">{% csrf_token %}<button class="button button-danger" aria-label="{{ item.name }} 삭제">삭제</button></form></div>
+        </article>{% empty %}<p class="muted">등록된 LLM이 없습니다. 연결 정보를 입력해 첫 설정을 등록하세요.</p>{% endfor %}
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}{% include 'reportbuilder/boards/scripts.html' %}{% endblock %}

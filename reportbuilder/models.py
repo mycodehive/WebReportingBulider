@@ -193,6 +193,38 @@ class GoogleOAuthApp(models.Model):
         return Fernet(settings.REPORT_SECRET_KEY.encode()).decrypt(self.encrypted_secret.encode()).decode()
 
 
+class LLMConfiguration(models.Model):
+    class Provider(models.TextChoices):
+        OPENAI = 'openai', 'OpenAI'
+        ANTHROPIC = 'anthropic', 'Anthropic'
+        GEMINI = 'gemini', 'Google Gemini'
+        OPENROUTER = 'openrouter', 'OpenRouter'
+        COMPATIBLE = 'compatible', 'OpenAI 호환 API'
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField('연결명', max_length=120, unique=True)
+    provider = models.CharField('제공자', max_length=20, choices=Provider.choices)
+    model = models.CharField('모델명', max_length=200)
+    base_url = models.URLField('API 기본 주소', max_length=500)
+    encrypted_api_key = models.TextField(blank=True)
+    active = models.BooleanField('사용', default=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['name', 'id']
+
+    def set_api_key(self, value):
+        self.encrypted_api_key = Fernet(settings.REPORT_SECRET_KEY.encode()).encrypt(value.encode()).decode()
+
+    def api_key(self):
+        if not self.encrypted_api_key:
+            return ''
+        return Fernet(settings.REPORT_SECRET_KEY.encode()).decrypt(self.encrypted_api_key.encode()).decode()
+
+    def __str__(self):
+        return self.name
+
+
 class PublicShare(models.Model):
     password_hash = models.CharField(max_length=128, blank=True)
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

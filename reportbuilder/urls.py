@@ -1,12 +1,16 @@
 from django.urls import path
 from . import views, google_oauth, sharing
 from . import analytics_views
-from . import branding, community, menu_views, settings_views
+from . import branding, community, menu_views, settings_views, api_settings
 
 urlpatterns = [
     path('settings/', settings_views.home, name='workspace_settings'),
     path('settings/sections/<int:section_id>/', settings_views.home, name='settings_section'),
     path('settings/company/', branding.settings, name='company_settings'),
+    path('settings/api/internal/', api_settings.internal, name='internal_api_settings'),
+    path('settings/api/external/', api_settings.external, name='external_api_settings'),
+    path('settings/api/external/<uuid:configuration_id>/', api_settings.external, name='llm_configuration_edit'),
+    path('settings/api/external/<uuid:configuration_id>/delete/', api_settings.delete, name='llm_configuration_delete'),
     path('menu-management/', menu_views.menu_management, name='menu_management'),
     path('company/logo/', branding.logo, name='company_logo'),
     path('boards/users/search/', community.user_search, name='board_user_search'),

@@ -1,0 +1,10 @@
+{% extends 'reportbuilder/base.html' %}
+{% load static %}
+{% block title %}내부API · 환경설정{% endblock %}
+{% block head %}<link rel="stylesheet" href="{% static 'reportbuilder/settings-navigation.css' %}">{% endblock %}
+{% block content %}
+<section class="community-page settings-page">
+  {% include 'reportbuilder/settings_navigation.html' %}
+  <div class="card community-card"><h2>내부API</h2><p class="muted">실험실에 열심히 개발중이에요</p></div>
+</section>
+{% endblock %}

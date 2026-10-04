@@ -3,7 +3,7 @@ from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_GET
 
-from . import branding, menu_views
+from . import branding, menu_views, api_settings
 from .models import SettingsSection
 from .settings_navigation import settings_navigation
 
@@ -23,5 +23,9 @@ def home(request, section_id=None):
         return branding.settings(request)
     if child and child.url == '/menu-management/':
         return menu_views.menu_management(request)
+    if child and child.url == '/settings/api/internal/':
+        return api_settings.internal(request)
+    if child and child.url == '/settings/api/external/':
+        return api_settings.external(request)
     context = settings_navigation(section.key if section else None, child.key if child else None)
     return render(request, 'reportbuilder/settings_home.html', context)
