@@ -5,7 +5,8 @@
 .settings-tabs {
   display: flex;
   align-items: stretch;
-  overflow-x: auto;
+  flex-wrap: wrap;
+  overflow: visible;
   gap: 6px;
   padding: 0 12px;
   border-bottom: 1px solid var(--border);
@@ -17,7 +18,9 @@
   justify-content: center;
   min-width: 136px;
   flex-shrink: 0;
-  white-space: nowrap;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
   min-height: 48px;
   padding: 12px 24px;
   margin-bottom: -1px;
@@ -37,6 +40,7 @@
   color: var(--accent);
 }
 .settings-submenu {
+  overflow: visible;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;

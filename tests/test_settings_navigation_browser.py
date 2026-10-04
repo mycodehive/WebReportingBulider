@@ -58,6 +58,8 @@ def test_settings_tabs_light_dark_desktop_mobile(client, monkeypatch):
                 tabs = page.get_by_role('navigation', name='환경설정 분류')
                 children = page.get_by_role('navigation', name='선택한 설정의 하위 메뉴')
                 assert tabs.evaluate('e => getComputedStyle(e).display') == 'flex'
+                assert tabs.evaluate('e => [getComputedStyle(e).overflowX, getComputedStyle(e).overflowY]') == ['visible', 'visible']
+                assert tabs.evaluate('e => e.scrollHeight <= e.clientHeight + 1 && e.scrollWidth <= e.clientWidth + 1')
                 assert tabs.get_by_role('link', name='기본정보').evaluate(
                     'e => getComputedStyle(e).borderTopWidth') == '3px'
                 assert children.bounding_box()['y'] >= tabs.bounding_box()['y'] + tabs.bounding_box()['height'] - 1
@@ -94,5 +96,21 @@ def test_settings_tabs_light_dark_desktop_mobile(client, monkeypatch):
         page.get_by_role('navigation', name='환경설정 분류').get_by_role('link', name='운영관리').click()
         playwright.expect(page.get_by_role('navigation', name='선택한 설정의 하위 메뉴').get_by_role('link', name='운영 가이드')).to_be_visible()
         assert SettingsMenu.objects.filter(section=section, label='운영 가이드', url='/manual/').exists()
+        # Many long tab names wrap without horizontal or vertical scrollbars.
+        for index in range(10):
+            SettingsSection.objects.create(key=f'wrap-{index}', label=f'긴 환경설정 탭 이름 {index}', order=100 + index)
+        page.set_viewport_size({'width': 390, 'height': 1000})
+        page.goto('http://testserver/menu-management/')
+        page.wait_for_load_state('networkidle')
+        for theme in ('light', 'dark'):
+            page.evaluate('theme => document.documentElement.dataset.theme = theme', theme)
+            tabs = page.get_by_role('navigation', name='환경설정 분류')
+            assert tabs.evaluate('e => [getComputedStyle(e).overflowX, getComputedStyle(e).overflowY]') == ['visible', 'visible']
+            assert tabs.evaluate('e => e.scrollHeight <= e.clientHeight + 1 && e.scrollWidth <= e.clientWidth + 1')
+            assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1')
+            for link in tabs.get_by_role('link').all():
+                bounds = link.bounding_box()
+                assert bounds['x'] >= 0 and bounds['x'] + bounds['width'] <= 390
+            page.screenshot(path=str(shots / f'tabs-wrap-{theme}-390.png'), full_page=True)
         assert not errors
         browser.close()
