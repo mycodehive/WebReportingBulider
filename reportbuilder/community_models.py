@@ -108,10 +108,9 @@ def default_menu_items():
         {'key': 'reports', 'label': '보고서 라이브러리', 'order': 20},
         {'key': 'connections', 'label': '데이터 연결', 'order': 30},
         {'key': 'boards', 'label': '게시판', 'order': 40},
-        {'key': 'company', 'label': '회사 로고', 'order': 50},
+        {'key': 'settings', 'label': '환경설정', 'order': 50},
         {'key': 'manual', 'label': '사용 가이드', 'order': 60},
         {'key': 'admin', 'label': '관리 설정', 'order': 70},
-        {'key': 'menu_management', 'label': '메뉴관리', 'order': 80},
     ]
 
 

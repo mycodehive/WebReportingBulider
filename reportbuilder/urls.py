@@ -4,6 +4,7 @@ from . import analytics_views
 from . import branding, community, menu_views
 
 urlpatterns = [
+    path('settings/', branding.settings, name='workspace_settings'),
     path('settings/company/', branding.settings, name='company_settings'),
     path('menu-management/', menu_views.menu_management, name='menu_management'),
     path('company/logo/', branding.logo, name='company_logo'),

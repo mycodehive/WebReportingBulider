@@ -1,12 +1,13 @@
 {% extends 'reportbuilder/base.html' %}
 {% block title %}메뉴관리{% endblock %}
 {% block content %}
-<section class="community-page">
-  <div class="community-heading"><div><span class="badge">워크스페이스 설정</span><h1>메뉴관리</h1><p class="muted">좌측 메뉴를 추가·수정·삭제하고 표시 순서와 접근 대상을 관리합니다.</p></div></div>
+<section class="community-page settings-page">
+  {% include "reportbuilder/settings_navigation.html" %}
+  <div class="community-heading settings-content-heading"><div><h2>메뉴관리</h2><p class="muted">좌측 메뉴를 추가·수정·삭제하고 표시 순서와 접근 대상을 관리합니다.</p></div></div>
   <div class="card community-card">
     <form method="post" class="menu-management-form">
       {% csrf_token %}
-      <div class="table-wrap"><table class="table"><thead><tr><th>메뉴명</th><th>내부 주소</th><th>순서</th><th>관리자 전용</th><th>사용</th><th>삭제</th></tr></thead><tbody>
+      <div class="table-wrap" tabindex="0" role="region" aria-label="메뉴 설정 표 (가로 스크롤 가능)"><table class="table"><thead><tr><th>메뉴명</th><th>내부 주소</th><th>순서</th><th>관리자 전용</th><th>사용</th><th>삭제</th></tr></thead><tbody>
       {% for item in items %}<tr>
         <td><input class="input" type="text" name="label_{{ item.pk }}" value="{{ item.label }}" maxlength="40" required aria-label="{{ item.label }} 메뉴명"></td>
         <td><input class="input menu-url-input" type="text" name="url_{{ item.pk }}" value="{{ item.url }}" maxlength="255" required aria-label="{{ item.label }} 내부 주소"></td>

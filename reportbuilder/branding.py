@@ -10,6 +10,7 @@ from django.shortcuts import redirect, render
 from django.views.decorators.http import require_http_methods, require_safe
 
 from .models import CompanyBranding
+from .settings_navigation import settings_navigation
 from .views import normalised_png
 
 
@@ -68,4 +69,4 @@ def settings(request):
                 branding.logo.storage.delete(previous)
             messages.success(request, '회사 정보를 저장했습니다.')
             return redirect('company_settings')
-    return render(request, 'reportbuilder/company_settings.html', {'form': form, 'branding': branding})
+    return render(request, 'reportbuilder/company_settings.html', {'form': form, 'branding': branding, **settings_navigation('basic', 'company')})

@@ -20,10 +20,9 @@ def workspace_navigation(request):
         {'key': 'reports', 'label': '보고서 라이브러리', 'order': 20, 'url': '/reports/'},
         {'key': 'connections', 'label': '데이터 연결', 'order': 30, 'url': '/connections/'},
         {'key': 'boards', 'label': '게시판', 'order': 40, 'url': '/boards/'},
-        {'key': 'company', 'label': '회사 로고', 'order': 50, 'url': '/settings/company/', 'staff_only': True},
+        {'key': 'settings', 'label': '환경설정', 'order': 50, 'url': '/settings/', 'staff_only': True},
         {'key': 'manual', 'label': '사용 가이드', 'order': 60, 'url': '/manual/'},
         {'key': 'admin', 'label': '관리 설정', 'order': 70, 'url': '/admin/', 'staff_only': True},
-        {'key': 'menu_management', 'label': '메뉴관리', 'order': 80, 'url': '/menu-management/', 'staff_only': True},
     ]
     user = getattr(request, 'user', None)
     try:
@@ -42,4 +41,9 @@ def workspace_navigation(request):
              (request.path == item['url'] or request.path.startswith(item['url'].rstrip('/') + '/'))}
             for item in defaults if not item.get('staff_only') or getattr(user, 'is_staff', False)
         ]
+    for item in items:
+        if item['key'] == 'settings':
+            item['active'] = item['active'] or request.path in {
+                reverse('workspace_settings'), reverse('company_settings'), reverse('menu_management'),
+            }
     return {'sidebar_items': items}

@@ -11,6 +11,7 @@ from django.views.decorators.http import require_http_methods
 
 from .community_models import MenuConfiguration, default_menu_items
 from .models import WorkspaceMenu
+from .settings_navigation import settings_navigation
 
 
 def valid_internal_url(value):
@@ -74,10 +75,19 @@ def menu_management(request):
                     keys = request.POST.getlist("keys")
                     labels = request.POST.getlist("labels")
                     orders = request.POST.getlist("orders")
-                    if not (len(keys) == len(labels) == len(orders) == len(default_menu_items())):
+                    expected_keys = {item['key'] for item in default_menu_items()}
+                    legacy_keys = (expected_keys - {'settings'}) | {'company', 'menu_management'}
+                    if not (len(keys) == len(labels) == len(orders) == len(set(keys))
+                            and set(keys) in (expected_keys, legacy_keys)):
                         raise ValidationError("메뉴 항목이 올바르지 않습니다.")
                     submitted = []
                     for key, label, order in zip(keys, labels, orders):
+                        # Old clients can still submit the former separate settings entries.
+                        if key in {'company', 'menu_management'}:
+                            if key == 'menu_management':
+                                continue
+                            key = 'settings'
+                            label = '환경설정'
                         menu = WorkspaceMenu.objects.get(key=key)
                         menu.label = label.strip()
                         menu.order = int(order)
@@ -108,4 +118,4 @@ def menu_management(request):
         return redirect("menu_management")
 
     items = WorkspaceMenu.objects.all()
-    return render(request, "reportbuilder/menu_management.html", {"items": items})
+    return render(request, "reportbuilder/menu_management.html", {"items": items, **settings_navigation("site", "menus")})
