@@ -62,6 +62,9 @@ uv run python manage.py runserver
 | Google 인증 필요 | 목록의 Google 인증 / 재인증 실행 |
 | 인증 완료 후 연결 실패 | Sheets API 활성화 및 로그인한 Google 계정의 원본 파일 접근 권한 |
 | 공개 연결 실패 | 링크 전체 공개, 다운로드 허용, 탭 이름/gid, OAuth 방식 사용 |
+| 숫자 컬럼이 String으로 표시 | 최신 코드로 서버를 재시작한 뒤 연결·시트를 선택하고 **데이터셋 추가** 실행. 기존 보고서에 저장된 String 필드는 연결을 새로 등록해도 자동 변경되지 않음 |
+
+공개 시트의 타입 정보는 Google이 `application/javascript`로 제공하는 GViz 응답을 텍스트로 받아 JSON으로만 해석합니다. 스크립트는 실행하지 않습니다. CSV 자료 읽기는 별도의 CSV 응답 검사를 유지합니다.
 
 ## 검증 범위와 근거
 

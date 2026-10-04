@@ -5,6 +5,7 @@ import json
 from urllib.parse import parse_qs
 from pathlib import Path
 from urllib.parse import urlparse
+from unittest.mock import Mock
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -25,12 +26,26 @@ def test_public_sheet_numeric_column_becomes_number_dataset(client, monkeypatch,
                                            config={'spreadsheet_id': 'abcdefghijk', 'auth_mode': 'public', 'sheet': '훈련일지'})
     project = Project.objects.create(owner=user, name='자전거여행')
     report = Report.objects.create(owner=user, project=project, name='자전거여행', definition=default_definition())
-    def sheet_response(url, *args, **kwargs):
-        if parse_qs(urlparse(url).query).get('tqx') == ['out:json']:
-            return 'google.visualization.Query.setResponse(' + json.dumps({'status': 'ok', 'table': {
+    def sheet_response(target):
+        if parse_qs(urlparse(target).query).get('tqx') == ['out:json']:
+            return 'application/javascript; charset=utf-8', '/*O_o*/\ngoogle.visualization.Query.setResponse(' + json.dumps({'status': 'ok', 'table': {
                 'cols': [{'label': '시행일', 'type': 'string'}, {'label': '거리(Km)', 'type': 'number'}], 'rows': []}}) + ');'
-        return '시행일,거리(Km)\n1일,50.01\n2일,62.48\n'
-    monkeypatch.setattr('reportbuilder.data._https_json', sheet_response)
+        return 'text/csv; charset=utf-8', '시행일,거리(Km)\n1일,50.01\n2일,62.48\n'
+
+    # Keep the real HTTP response validation: mocking _https_json previously
+    # concealed rejection of Google's application/javascript metadata.
+    def transport(host, address, port):
+        conn = Mock()
+        def request(method, target, headers):
+            content_type, text = sheet_response(target)
+            response = Mock(status=200)
+            response.getheader.return_value = content_type
+            response.read.return_value = text.encode('utf-8')
+            conn.getresponse.return_value = response
+        conn.request.side_effect = request
+        return conn
+    monkeypatch.setattr('reportbuilder.data.socket.getaddrinfo', lambda *a, **kw: [(2, 1, 6, '', ('8.8.8.8', 443))])
+    monkeypatch.setattr('reportbuilder.data._PinnedHTTPS', transport)
     client.force_login(user)
     calls = []
 

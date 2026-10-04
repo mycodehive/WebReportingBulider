@@ -389,7 +389,7 @@ class _PinnedHTTPS(http.client.HTTPSConnection):
         self.sock = self._context.wrap_socket(raw, server_hostname=self.host)
 
 
-def _https_json(endpoint, headers=None, allowed_hosts=None, *, csv_text=False):
+def _https_json(endpoint, headers=None, allowed_hosts=None, *, csv_text=False, gviz_text=False):
     """Exact host allowlist, public DNS/IP, TLS validation, no redirects or proxies.
 
     DNS is resolved once and the HTTPS socket is pinned to that validated address,
@@ -424,16 +424,18 @@ def _https_json(endpoint, headers=None, allowed_hosts=None, *, csv_text=False):
         response = conn.getresponse()
         if response.status == 429:
             raise DataError("RATE_LIMIT", "자료 API 요청 한도에 도달했습니다. 잠시 후 다시 실행하세요.")
-        if response.status != 200 and csv_text:
+        if response.status != 200 and (csv_text or gviz_text):
             raise DataError('AUTH_REQUIRED', '공개 시트를 읽을 수 없습니다. 링크 공개/다운로드 권한을 확인하거나 OAuth로 연결하세요.')
         if response.status != 200:
             raise DataError("REMOTE_ERROR", "자료 API가 정상 응답하지 않았습니다. 연결 권한과 고정 주소를 확인하세요.")
         raw = response.read(_SOURCE_BYTES + 1)
         if len(raw) > _SOURCE_BYTES:
             raise DataError("DATA_LIMIT", "자료 API 응답이 허용 크기를 초과했습니다.")
-        if csv_text:
+        if csv_text or gviz_text:
             content_type = response.getheader('Content-Type', '').split(';')[0].lower()
-            if content_type not in {'text/csv', 'text/plain', 'application/csv'} or raw.lstrip().startswith(b'<'):
+            accepted = ({'application/javascript', 'text/javascript', 'application/json', 'text/plain'}
+                        if gviz_text else {'text/csv', 'text/plain', 'application/csv'})
+            if content_type not in accepted or raw.lstrip().startswith(b'<'):
                 raise DataError('AUTH_REQUIRED', '공개 CSV를 읽을 수 없습니다. 링크 공개 설정을 확인하거나 OAuth로 연결하세요.')
             return raw.decode('utf-8-sig')
         return json.loads(raw)
@@ -477,7 +479,9 @@ def _public_sheet_numeric_hints(config):
     else:
         query['gid'] = str(config.get('gid', '0'))
     endpoint = 'https://docs.google.com/spreadsheets/d/' + config['spreadsheet_id'] + '/gviz/tq?' + urlencode(query)
-    text = _https_json(endpoint, {}, ['docs.google.com'], csv_text=True)
+    # GViz wraps JSON in a callback and serves application/javascript. Decode
+    # text only; the strict parser below never executes the response as code.
+    text = _https_json(endpoint, {}, ['docs.google.com'], gviz_text=True)
     match = re.fullmatch(r'\s*(?:/\*.*?\*/\s*)?google\.visualization\.Query\.setResponse\((\{.*\})\);?\s*', text, re.S)
     try:
         payload = json.loads(match.group(1) if match else text)

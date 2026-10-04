@@ -312,6 +312,66 @@ def test_rest_pins_validated_ip_and_never_follows_redirect(monkeypatch):
     conn.close.assert_called_once()
 
 
+@pytest.mark.parametrize('content_type', ['application/javascript; charset=utf-8', 'text/javascript', 'application/json'])
+def test_public_sheet_metadata_accepts_google_http_content_type(monkeypatch, content_type):
+    import json
+    from urllib.parse import parse_qs, urlsplit
+    monkeypatch.setattr(data.socket, 'getaddrinfo', lambda *a, **kw: [(2, 1, 6, '', ('8.8.8.8', 443))])
+    requests = []
+
+    def transport(host, address, port):
+        assert (host, address, port) == ('docs.google.com', '8.8.8.8', 443)
+        conn = Mock()
+        def request(method, target, headers):
+            requests.append(target)
+            metadata = parse_qs(urlsplit(target).query)['tqx'] == ['out:json']
+            payload = '/*O_o*/\ngoogle.visualization.Query.setResponse(' + json.dumps({
+                'status': 'ok', 'table': {'cols': [
+                    {'id': 'A', 'label': '코드', 'type': 'string'},
+                    {'id': 'B', 'label': '거리(Km)', 'type': 'number'}], 'rows': []}}) + ');'
+            response = Mock(status=200)
+            response.getheader.return_value = content_type if metadata else 'text/csv; charset=utf-8'
+            response.read.return_value = (payload if metadata else '코드,거리(Km)\n001,50.01\n002,62.48\n').encode()
+            conn.getresponse.return_value = response
+        conn.request.side_effect = request
+        return conn
+    monkeypatch.setattr(data, '_PinnedHTTPS', transport)
+    config = {'spreadsheet_id': 'abcdefghijk', 'auth_mode': 'public', 'gid': '42'}
+    code, distance = data.introspect('google_sheets', config)['objects'][0]['columns']
+    assert 'suggested_type' not in code
+    assert distance['suggested_type'] == 'decimal'
+    assert distance['suggested_conversion'] == 'to_decimal'
+    # Old string/identity reports and new explicit numeric reports both run.
+    for typ, conversion in [('string', 'identity'), ('number', 'to_decimal')]:
+        contract, binding = dataset(['거리(Km)'], [typ], object_name='공개 시트', conversions={'거리(Km)': conversion})
+        result = data.execute_dataset('google_sheets', config, contract, binding)
+        assert result['rows'][0]['f0'] == '50.01'  # Decimal is serialized without precision loss.
+        assert result['fields'][0]['type'] == typ
+    assert any('tqx=out%3Ajson' in target for target in requests)
+
+
+@pytest.mark.parametrize('content_type,text', [
+    ('text/html', '<html>Sign in</html>'),
+    ('application/javascript', 'alert("not a GViz response")'),
+    ('application/javascript', '<html>Sign in</html>'),
+])
+def test_public_sheet_metadata_rejects_html_and_arbitrary_script(monkeypatch, content_type, text):
+    monkeypatch.setattr(data.socket, 'getaddrinfo', lambda *a, **kw: [(2, 1, 6, '', ('8.8.8.8', 443))])
+    response = Mock(status=200)
+    response.getheader.return_value = content_type
+    response.read.return_value = text.encode()
+    conn = Mock()
+    conn.getresponse.return_value = response
+    monkeypatch.setattr(data, '_PinnedHTTPS', Mock(return_value=conn))
+    config = {'spreadsheet_id': 'abcdefghijk', 'auth_mode': 'public'}
+    with pytest.raises(data.DataError):
+        data._public_sheet_numeric_hints(config)
+    # JavaScript is permitted only for the metadata parser, never for CSV data.
+    with pytest.raises(data.DataError):
+        data._sheet_records(config, '공개 시트', 100)
+    conn.close.assert_called()
+
+
 def test_rest_response_path_and_full_snapshot_limit(monkeypatch):
     monkeypatch.setattr(data, "_https_json", lambda *args, **kwargs: {"result": {"rows": [{"x": 1}, {"x": 2}, {"x": 3}]}})
     config = {"endpoint": "https://api.example.test/data", "records_path": "result.rows"}
