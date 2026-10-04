@@ -2,10 +2,10 @@ from django.contrib import messages
 from django.contrib.auth import login
 from django.db import transaction
 from django.shortcuts import redirect, render
-from django.urls import reverse
-from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_http_methods
 
+from .email_verification import VerificationError, reserve_public_request, send_verification
+from .models import EmailVerification
 from .demo import prepare_user_demo
 from .signup_forms import SignupForm
 
@@ -16,8 +16,12 @@ def signup(request):
         return redirect("dashboard")
     form = SignupForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
+        if not reserve_public_request(request):
+            form.add_error(None, "가입 요청이 너무 많습니다. 잠시 후 다시 시도하세요.")
+            return render(request, "reportbuilder/signup.html", {"form": form})
         with transaction.atomic():
             user = form.save()
+            EmailVerification.objects.create(user=user, required=True)
             demo_ready = prepare_user_demo(user)
         login(request, user, backend="django.contrib.auth.backends.ModelBackend")
         messages.success(request, "가입이 완료되었습니다.")
@@ -25,8 +29,10 @@ def signup(request):
             messages.info(request, "데모 보고서를 준비했습니다. 보고서 라이브러리에서 확인하세요.")
         else:
             messages.warning(request, "데모 보고서 생성에 실패했습니다. 보고서 라이브러리에서 다시 시도할 수 있습니다.")
-        next_url = request.POST.get("next", "")
-        if url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
-            return redirect(next_url)
-        return redirect(reverse("dashboard"))
+        try:
+            send_verification(user, request)
+            messages.info(request, "인증 메일을 발송했습니다. 메일 주소를 인증하면 서비스를 이용할 수 있습니다.")
+        except VerificationError as exc:
+            messages.error(request, str(exc))
+        return redirect('email_verification_notice')
     return render(request, "reportbuilder/signup.html", {"form": form, "next": request.GET.get("next", "")})

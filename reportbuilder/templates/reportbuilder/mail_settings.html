@@ -21,6 +21,7 @@
       </fieldset>
       {% endfor %}
       <div class="mail-grid mail-sender"><div class="mail-field"><label for="{{ form.sender_email.id_for_label }}">{{ form.sender_email.label }}</label>{{ form.sender_email }}{{ form.sender_email.errors }}</div><div class="mail-field"><label for="{{ form.sender_name.id_for_label }}">{{ form.sender_name.label }}</label>{{ form.sender_name }}{{ form.sender_name.errors }}</div></div>
+      <div class="mail-field"><label for="{{ form.site_url.id_for_label }}">{{ form.site_url.label }}</label>{{ form.site_url }}<small class="muted">{{ form.site_url.help_text }}</small>{{ form.site_url.errors }}</div>
       <div class="community-actions"><button class="button button-primary" type="submit">메일 설정 저장</button></div>
     </form>
   </div>

@@ -1,0 +1,7 @@
+.email-verification-card { min-width: 0; }
+.email-verification-card p { overflow-wrap: anywhere; }
+.email-verification-card form + form { margin-top: 12px; }
+#email-batch-results { width: 100%; table-layout: fixed; }
+#email-batch-results td, #email-batch-results th { overflow-wrap: anywhere; white-space: normal; }
+#email-batch-status { overflow-wrap: anywhere; }
+@media (max-width: 640px) { #email-batch-results th, #email-batch-results td { padding: 8px 5px; } }

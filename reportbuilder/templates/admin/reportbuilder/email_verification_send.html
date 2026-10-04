@@ -1,0 +1,15 @@
+{% extends 'admin/base_site.html' %}
+{% load static %}
+{% block extrahead %}{{ block.super }}<link rel="stylesheet" href="{% static 'reportbuilder/email-verification.css' %}"><script src="{% static 'reportbuilder/admin-email-verification.js' %}" defer></script>{% endblock %}
+{% block content %}
+<div id="content-main">
+  <p>선택한 사용자에게 저장된 메일 설정으로 인증 메일을 차례로 발송합니다. 완료될 때까지 이 화면을 열어 두세요. 이미 인증된 사용자와 비활성 사용자는 제외합니다.</p>
+  <form id="email-verification-batch" data-send-url="{{ send_url }}">{% csrf_token %}<input type="hidden" name="ticket" value="{{ ticket }}">
+    <div class="submit-row"><button type="button" id="email-batch-stop" class="button">발송 중지</button> <a href="{{ list_url }}" class="button">사용자 목록</a></div>
+  </form>
+  <p id="email-batch-status" role="status" aria-live="polite">발송을 준비하고 있습니다.</p>
+  <div class="results"><table id="email-batch-results"><thead><tr><th>사용자</th><th>메일 주소</th><th>발송 결과</th></tr></thead><tbody></tbody></table></div>
+  <noscript>발송하려면 JavaScript를 활성화하세요.</noscript>
+</div>
+{{ recipients|json_script:'email-batch-recipients' }}
+{% endblock %}

@@ -26,6 +26,7 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware", "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware", "django.middleware.common.CommonMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware", "reportbuilder.middleware.ApiAuthenticationMiddleware",
+    "reportbuilder.middleware.EmailVerificationMiddleware",
     "reportbuilder.middleware.ApiAwareCsrfMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware", "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]

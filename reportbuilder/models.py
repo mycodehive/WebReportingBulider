@@ -275,3 +275,22 @@ class MailConfiguration(models.Model):
 
     class Meta:
         constraints = [models.CheckConstraint(condition=models.Q(id=1), name='mail_configuration_singleton')]
+
+
+class EmailVerification(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='email_verification')
+    email = models.EmailField(blank=True)
+    required = models.BooleanField(default=False)
+    verified_at = models.DateTimeField(null=True, blank=True)
+    token_digest = models.CharField(max_length=64, blank=True)
+    token_context = models.CharField(max_length=64, blank=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    last_sent_at = models.DateTimeField(null=True, blank=True)
+    window_started_at = models.DateTimeField(null=True, blank=True)
+    send_count = models.PositiveSmallIntegerField(default=0)
+
+
+class EmailVerificationLimit(models.Model):
+    key = models.CharField(max_length=64, primary_key=True)
+    window_started_at = models.DateTimeField(db_index=True)
+    count = models.PositiveSmallIntegerField(default=0)

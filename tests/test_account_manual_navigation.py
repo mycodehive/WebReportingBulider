@@ -2,8 +2,9 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.urls import reverse
+from django.utils import timezone
 
-from reportbuilder.models import Connection, ManualVersion, Report, WorkspaceMenu
+from reportbuilder.models import Connection, EmailVerification, ManualVersion, Report, WorkspaceMenu
 
 pytestmark = pytest.mark.django_db
 
@@ -127,6 +128,9 @@ def test_failed_signup_demo_keeps_account_and_member_can_retry(client, settings,
     member = get_user_model().objects.get(username="retry-member")
     assert "_auth_user_id" in client.session
     assert not Project.objects.filter(owner=member).exists()
+    assert client.get(reverse('library')).url == reverse('email_verification_notice')
+    # Demo recovery is available after the new signup verification requirement.
+    EmailVerification.objects.filter(user=member).update(email=member.email, verified_at=timezone.now())
     assert 'id="demo-bootstrap"' in client.get(reverse("library")).content.decode()
     assert client.post(reverse("ensure_demo")).json() == {"ready": True}
     report = Report.objects.get(owner=member)

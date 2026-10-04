@@ -1,5 +1,6 @@
 import hashlib
 from django.contrib.auth.models import AnonymousUser
+from django.conf import settings
 from django.utils import timezone
 from django.middleware.csrf import CsrfViewMiddleware
 from django.utils.cache import patch_cache_control
@@ -32,3 +33,23 @@ class ApiAwareCsrfMiddleware(CsrfViewMiddleware):
         if getattr(request, "api_token", None) is not None:
             return None
         return super().process_view(request, callback, callback_args, callback_kwargs)
+
+
+class EmailVerificationMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        from django.http import JsonResponse
+        from django.shortcuts import redirect
+        from .email_verification import needs_verification
+
+        permitted = (request.path.startswith('/accounts/email/') or
+                     request.path in {'/accounts/login/', '/accounts/logout/', '/accounts/signup/'} or
+                     request.path.startswith(settings.STATIC_URL))
+        if (not permitted and request.user.is_authenticated and not request.user.is_staff
+                and needs_verification(request.user)):
+            if request.path.startswith('/api/'):
+                return JsonResponse({'code': 'EMAIL_VERIFICATION_REQUIRED', 'message': '메일 주소 인증을 먼저 완료하세요.'}, status=403)
+            return redirect('email_verification_notice')
+        return self.get_response(request)

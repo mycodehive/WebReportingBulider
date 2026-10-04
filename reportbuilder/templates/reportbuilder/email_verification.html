@@ -1,0 +1,28 @@
+{% extends 'reportbuilder/base.html' %}
+{% load static %}
+{% block head %}<link rel="stylesheet" href="{% static 'reportbuilder/email-verification.css' %}">{% endblock %}
+{% block title %}메일 인증 · WebReportingBuilder{% endblock %}
+{% block content %}
+<div class="login-wrap"><div class="card login-card email-verification-card">
+  <span class="badge">WebReportingBuilder</span>
+  {% if state == 'pending' %}
+    <h1>메일 주소를 인증해 주세요.</h1>
+    <p class="muted"><strong>{{ email }}</strong>로 받은 인증 링크를 열고 확인 버튼을 눌러 주세요. 신규 가입자는 인증 후 서비스를 이용할 수 있습니다.</p>
+    <p class="muted">링크는 24시간 동안 유효합니다. 메일이 보이지 않으면 스팸함을 확인하거나 다시 발송하세요. 재발송하면 이전 링크는 사용할 수 없습니다.</p>
+    <form method="post" action="{% url 'email_verification_resend' %}">{% csrf_token %}<button class="button button-primary" type="submit">인증 메일 다시 보내기</button></form>
+    <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="button button-secondary" type="submit">로그아웃</button></form>
+  {% elif state == 'confirm' %}
+    <h1>메일 주소 인증</h1><p class="muted">아래 버튼을 누르면 이 인증 링크에 연결된 메일 주소의 인증이 완료됩니다.</p>
+    <form method="post" action="{% url 'email_verification_confirm' %}">{% csrf_token %}<button class="button button-primary" type="submit">메일 인증 완료</button></form>
+  {% elif state == 'complete' %}
+    <h1>메일 인증이 완료되었습니다.</h1><p class="muted">인증한 계정으로 서비스를 이용할 수 있습니다.</p>
+    {% if user.is_authenticated %}<a class="button button-primary" href="{% url 'dashboard' %}">서비스로 이동</a>{% else %}<a class="button button-primary" href="{% url 'login' %}">로그인하기</a>{% endif %}
+  {% elif state == 'wrong-account' %}
+    <h1>다른 계정으로 로그인되어 있습니다.</h1><p class="muted">로그아웃한 뒤 메일의 인증 링크를 다시 열어 주세요.</p>
+    <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="button button-secondary" type="submit">로그아웃</button></form>
+  {% else %}
+    <h1>인증 링크를 사용할 수 없습니다.</h1><p class="muted">링크가 만료되었거나 이미 사용되었습니다. 재발송한 경우 가장 최근 메일의 링크를 사용하세요.</p>
+    {% if user.is_authenticated %}<a class="button button-primary" href="{% url 'email_verification_notice' %}">인증 메일 다시 요청하기</a>{% else %}<a class="button button-primary" href="{% url 'login' %}?next={% url 'email_verification_notice' %}">로그인 후 인증 메일 요청</a>{% endif %}
+  {% endif %}
+</div></div>
+{% endblock %}

@@ -4,6 +4,7 @@ from django.contrib.auth.admin import UserAdmin
 from django.db import transaction
 
 from .demo import prepare_user_demo
+from .admin_email_verification import EmailStatusFilter, EmailVerificationAdminMixin, send_email_verifications
 from .models import (
     ApiToken, Asset, AuditEvent, Board, BoardCategory, BoardPost, BoardReply, BoardStatus,
     CompanyBranding, Connection, Execution, ManualVersion, Project,
@@ -12,7 +13,7 @@ from .models import (
 
 
 MENU_GUIDES = {
-    "User": ("관리자에서 계정을 만들고 상태·권한을 관리합니다.", "새 계정 등록 시 데모 보고서를 준비하며, 사용자 목록에서 대상을 체크한 뒤 작업 메뉴의 데모 보고서 생성 / 재생성을 실행하세요. 기존 매출 현황 예제만 재생성하며 직접 만든 보고서는 유지합니다."),
+    "User": ("관리자에서 계정을 만들고 상태·권한을 관리합니다.", "새 계정 등록 시 데모 보고서를 준비하며, 사용자 목록에서 대상을 체크한 뒤 작업 메뉴의 데모 보고서 생성 / 재생성을 실행하세요. 기존 매출 현황 예제만 재생성하며 직접 만든 보고서는 유지합니다. 메일 인증 메일 전송 작업은 선택한 사용자에게 인증 링크를 발송합니다. 메일 인증 상태와 일시는 사용자 상세에서 확인하세요."),
     "Connection": ("데이터 연결과 자격 증명을 관리합니다.", "보고서 데이터셋이 이 연결을 참조합니다. 일반 사용자는 자신이 소유한 연결만 선택할 수 있습니다."),
     "Report": ("보고서 정의와 소유자, 공유 권한을 관리합니다.", "보고서는 프로젝트에 속하고 연결을 데이터셋에 매핑합니다. 게시와 버전 이력은 별도 메뉴에서 관리합니다."),
     "Project": ("보고서를 묶는 작업 공간입니다.", "프로젝트에 여러 보고서와 이미지 자산이 연결됩니다."),
@@ -210,13 +211,22 @@ def generate_demo_reports(modeladmin, request, queryset):
         messages.warning(request, f"비활성 사용자 {skipped}명은 제외했습니다.")
 
 
-class WorkspaceUserAdmin(ExplainedModelAdmin, UserAdmin):
-    actions = [generate_demo_reports]
+class WorkspaceUserAdmin(EmailVerificationAdminMixin, ExplainedModelAdmin, UserAdmin):
+    actions = [generate_demo_reports, send_email_verifications]
+    list_display = (*UserAdmin.list_display, 'email_verified')
+    list_filter = (*UserAdmin.list_filter, EmailStatusFilter)
+    readonly_fields = (*UserAdmin.readonly_fields, 'email_verified', 'email_verified_on')
+    fieldsets = (*UserAdmin.fieldsets, ('메일 인증', {'fields': ('email_verified', 'email_verified_on')}))
     change_list_template = "admin/reportbuilder/change_list.html"
 
     def save_model(self, request, obj, form, change):
         is_new = obj._state.adding
+        old_email = type(obj).objects.filter(pk=obj.pk).values_list('email', flat=True).first() if not is_new else None
         super().save_model(request, obj, form, change)
+        if not is_new and (old_email or '').strip().lower() != obj.email.strip().lower():
+            from .models import EmailVerification
+            EmailVerification.objects.filter(user=obj).update(email=obj.email.strip().lower(), verified_at=None,
+                                                             token_digest='', token_context='', expires_at=None)
         if is_new and obj.is_active:
             if prepare_user_demo(obj):
                 messages.success(request, "사용자의 데모 보고서를 준비했습니다.")

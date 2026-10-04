@@ -3,6 +3,7 @@ import json
 import re
 from datetime import timedelta
 from email.utils import formataddr
+from urllib.parse import urlsplit
 
 import boto3
 import httpx
@@ -58,6 +59,8 @@ class MailForm(forms.Form):
     ses_region = forms.ChoiceField(label='AWS 리전', choices=REGIONS, initial='ap-northeast-2')
     sender_email = forms.EmailField(label='발신자 이메일', max_length=254)
     sender_name = forms.CharField(label='발신자 이름', max_length=120)
+    site_url = forms.URLField(label='서비스 주소 (인증 메일 링크)', required=False, max_length=500, assume_scheme='https',
+                              help_text='운영 시 https://reports.example.com처럼 외부에서 접속 가능한 주소를 지정하세요.')
 
     def __init__(self, *args, configuration, **kwargs):
         self.configuration = configuration
@@ -70,6 +73,16 @@ class MailForm(forms.Form):
                 field.help_text = '등록됨 · 비워 두면 기존 값을 유지합니다.' if self.stored_secrets.get(name) else '저장 시 암호화됩니다.'
         self.fields['smtp_host'].widget.attrs['placeholder'] = 'smtp.example.com'
         self.fields['mailgun_domain'].widget.attrs['placeholder'] = 'mg.example.com'
+
+    def clean_site_url(self):
+        value = self.cleaned_data['site_url'].rstrip('/')
+        if value:
+            parts = urlsplit(value)
+            if (parts.scheme not in ({'http', 'https'} if settings.DEBUG else {'https'})
+                    or not parts.hostname or parts.username or parts.password or parts.path
+                    or parts.query or parts.fragment or any(c in value for c in '\r\n\x00')):
+                raise forms.ValidationError('경로·계정·쿼리 없는 서비스 주소를 입력하세요. 운영 시 HTTPS가 필수입니다.')
+        return value
 
     def clean(self):
         data = super().clean()
@@ -111,11 +124,9 @@ class TestMailForm(forms.Form):
     recipient = forms.EmailField(label='테스트 메일을 받을 이메일 주소', max_length=254, widget=forms.EmailInput(attrs={'class': 'input', 'placeholder': 'recipient@example.com'}))
 
 
-def send_test(config, recipient):
+def send_message(config, recipient, subject, body):
     options, credentials = config.options, secrets(config)
     sender = formataddr((options['sender_name'], options['sender_email']))
-    subject = '[WebReportingBuilder] 메일 설정 테스트'
-    body = '테스트 메일입니다. 이 메일을 수신했다면 메일 설정이 정상적으로 작동합니다.'
     if options['provider'] == 'smtp':
         backend = EmailBackend(host=options['smtp_host'], port=options['smtp_port'],
                                username=options['smtp_username'], password=credentials.get('smtp_password', ''),
@@ -141,6 +152,11 @@ def send_test(config, recipient):
                                                   'Body': {'Text': {'Data': body, 'Charset': 'UTF-8'}}}})
         finally:
             client.close()
+
+
+def send_test(config, recipient):
+    send_message(config, recipient, '[WebReportingBuilder] 메일 설정 테스트',
+                 '테스트 메일입니다. 이 메일을 수신했다면 메일 설정이 정상적으로 작동합니다.')
 
 
 @login_required
