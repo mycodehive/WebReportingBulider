@@ -1,0 +1,78 @@
+/* Shared settings hierarchy: category tabs, child menu, then page content. */
+.settings-page { min-width: 0; }
+.settings-heading h1 { margin: 0 0 8px; }
+.settings-heading p { margin: 0 0 24px; }
+.settings-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--border);
+  margin: 0;
+}
+.settings-tabs a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 136px;
+  min-height: 48px;
+  padding: 12px 24px;
+  margin-bottom: -1px;
+  border: 1px solid var(--border);
+  border-radius: 10px 10px 0 0;
+  background: var(--surface-raised);
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 650;
+}
+.settings-tabs a:hover { background: var(--accent-soft); color: var(--accent); }
+.settings-tabs a.active {
+  border-top: 3px solid var(--accent);
+  border-bottom-color: var(--surface);
+  padding-top: 10px;
+  background: var(--surface);
+  color: var(--accent);
+}
+.settings-submenu {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 0;
+  border-radius: 0 0 10px 10px;
+  margin: 0 0 24px;
+}
+.settings-submenu a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 10px 18px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.settings-submenu a.active, .settings-submenu a:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 24%, var(--border));
+}
+.settings-tabs a:focus-visible, .settings-submenu a:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+.settings-content-heading h2 { margin: 0 0 8px; font-size: 22px; }
+.settings-content-heading p { margin: 0; }
+.settings-page .table-wrap { max-width: 100%; overflow-x: auto; }
+.settings-page .community-columns > * { min-width: 0; }
+.settings-page .menu-management-form .table th:first-child,
+.settings-page .menu-management-form .table td:first-child { display: table-cell; }
+.settings-page .menu-management-form .table { min-width: 800px; }
+@media (max-width: 480px) {
+  .settings-tabs { padding: 0 8px; }
+  .settings-tabs a { flex: 1; min-width: 0; padding-right: 14px; padding-left: 14px; }
+  .settings-submenu { padding: 12px; }
+  .settings-heading p { line-height: 1.7; }
+}

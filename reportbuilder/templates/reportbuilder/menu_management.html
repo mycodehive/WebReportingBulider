@@ -1,4 +1,6 @@
 {% extends 'reportbuilder/base.html' %}
+{% load static %}
+{% block head %}<link rel="stylesheet" href="{% static 'reportbuilder/settings-navigation.css' %}">{% endblock %}
 {% block title %}메뉴관리{% endblock %}
 {% block content %}
 <section class="community-page settings-page">

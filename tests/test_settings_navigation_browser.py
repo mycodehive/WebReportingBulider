@@ -51,6 +51,10 @@ def test_settings_tabs_light_dark_desktop_mobile(client, monkeypatch):
                 page.evaluate('theme => document.documentElement.dataset.theme = theme', theme)
                 tabs = page.get_by_role('navigation', name='환경설정 분류')
                 children = page.get_by_role('navigation', name='선택한 설정의 하위 메뉴')
+                assert tabs.evaluate('e => getComputedStyle(e).display') == 'flex'
+                assert tabs.get_by_role('link', name='기본정보').evaluate(
+                    'e => getComputedStyle(e).borderTopWidth') == '3px'
+                assert children.bounding_box()['y'] >= tabs.bounding_box()['y'] + tabs.bounding_box()['height'] - 1
                 playwright.expect(tabs.get_by_role('link', name='기본정보')).to_have_attribute('aria-current', 'page')
                 playwright.expect(children.get_by_role('link', name='회사로고')).to_be_visible()
                 playwright.expect(page.get_by_role('heading', name='로고 등록 / 수정')).to_be_visible()
