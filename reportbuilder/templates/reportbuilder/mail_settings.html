@@ -1,0 +1,39 @@
+{% extends 'reportbuilder/base.html' %}
+{% load static %}
+{% block title %}메일 · 환경설정{% endblock %}
+{% block head %}<link rel="stylesheet" href="{% static 'reportbuilder/settings-navigation.css' %}"><link rel="stylesheet" href="{% static 'reportbuilder/mail-settings.css' %}">{% endblock %}
+{% block content %}
+<section class="community-page settings-page">
+  {% include 'reportbuilder/settings_navigation.html' %}
+  <div class="card community-card mail-card">
+    <h2>메일 설정 <span class="mail-admin-badge">관리자 전용</span></h2>
+    <p class="muted">사이트에서 사용할 메일 발송 방식을 선택하세요. 설정을 저장한 뒤 아래에서 테스트할 수 있습니다.</p>
+    <form method="post" action="{% url 'mail_settings' %}" class="community-form" id="mail-settings-form">
+      {% csrf_token %}<input type="hidden" name="action" value="save">
+      {{ form.non_field_errors }}
+      <div class="mail-provider"><label for="{{ form.provider.id_for_label }}">{{ form.provider.label }}</label>{{ form.provider }}{{ form.provider.errors }}</div>
+      {% for provider,label,fields in groups %}
+      <fieldset class="mail-provider-fields" data-mail-provider="{{ provider }}"><legend>{{ label }}</legend>
+        <div class="mail-grid">{% for field in fields %}<div class="mail-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<small class="muted">{{ field.help_text }}</small>{% endif %}{{ field.errors }}</div>{% endfor %}</div>
+        {% if provider == 'smtp' %}<p class="muted">TLS는 일반적으로 587, SSL/TLS는 465 포트를 사용합니다. 암호화 없음은 인증 없는 신뢰된 릴레이에만 사용하세요.</p>{% endif %}
+        {% if provider == 'mailgun' %}<p class="muted">Mailgun에 등록하고 인증한 도메인을 입력하세요. 도메인을 생성한 미국·유럽 리전에 맞춰 엔드포인트를 선택하세요.</p>{% endif %}
+        {% if provider == 'ses' %}<p class="muted">선택한 리전의 발신자 인증과 ses:SendEmail 권한이 필요합니다. 샌드박스에서는 인증된 수신자만 사용할 수 있습니다. SMTP 자격 증명 대신 AWS API 액세스 키를 입력하세요.</p>{% endif %}
+      </fieldset>
+      {% endfor %}
+      <div class="mail-grid mail-sender"><div class="mail-field"><label for="{{ form.sender_email.id_for_label }}">{{ form.sender_email.label }}</label>{{ form.sender_email }}{{ form.sender_email.errors }}</div><div class="mail-field"><label for="{{ form.sender_name.id_for_label }}">{{ form.sender_name.label }}</label>{{ form.sender_name }}{{ form.sender_name.errors }}</div></div>
+      <div class="community-actions"><button class="button button-primary" type="submit">메일 설정 저장</button></div>
+    </form>
+  </div>
+  <div class="card community-card mail-card">
+    <h2>테스트 메일</h2><p class="muted">저장된 설정으로 테스트 메일을 발송합니다. 설정을 변경했다면 먼저 저장하세요. 발송은 30초 간격으로 가능합니다.</p>
+    <form method="post" action="{% url 'mail_settings' %}" class="community-form" id="mail-test-form">
+      {% csrf_token %}<input type="hidden" name="action" value="test">{{ test_form.non_field_errors }}
+      <label for="{{ test_form.recipient.id_for_label }}">{{ test_form.recipient.label }}</label>
+      <div class="mail-test-row">{{ test_form.recipient }}<button class="button button-primary" type="submit" {% if not saved %}disabled{% endif %}>테스트 발송</button></div>{{ test_form.recipient.errors }}
+      {% if not saved %}<small class="muted">메일 설정을 먼저 저장하세요.</small>{% endif %}
+      <p role="status" class="muted mail-send-status" hidden>테스트 메일을 발송하고 있습니다…</p>
+    </form>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}<script src="{% static 'reportbuilder/mail-settings.js' %}" defer></script>{% endblock %}

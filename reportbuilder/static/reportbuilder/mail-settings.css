@@ -1,0 +1,16 @@
+.mail-card { min-width: 0; }
+.mail-admin-badge { font-size: .75rem; font-weight: 500; padding: 4px 8px; border-radius: 6px; background: var(--accent-soft); color: var(--accent); vertical-align: middle; }
+.mail-provider { max-width: 420px; display: grid; gap: 8px; }
+.mail-provider-fields { margin: 20px 0; padding: 18px 0; border: 0; border-top: 1px solid var(--border); min-width: 0; }
+.mail-provider-fields[hidden] { display: none; }
+.mail-provider-fields legend { font-weight: 700; padding-right: 12px; }
+.mail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.mail-field { min-width: 0; display: grid; align-content: start; gap: 8px; }
+.mail-field .input, .mail-test-row .input { width: 100%; min-width: 0; box-sizing: border-box; }
+.mail-sender { padding-top: 20px; border-top: 1px solid var(--border); }
+.mail-test-row { display: flex; align-items: center; gap: 12px; }
+.mail-test-row .input { flex: 1; }
+.mail-test-row button { flex-shrink: 0; }
+.mail-card .errorlist { color: var(--danger); padding-left: 20px; overflow-wrap: anywhere; }
+.mail-card small, .mail-card p { overflow-wrap: anywhere; }
+@media (max-width: 640px) { .mail-grid { grid-template-columns: minmax(0, 1fr); } .mail-test-row { flex-direction: column; align-items: stretch; } }

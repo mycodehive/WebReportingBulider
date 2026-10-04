@@ -263,3 +263,15 @@ class ManualVersion(models.Model):
 
     def __str__(self):
         return f"{self.get_audience_display()} v{self.version}"
+
+
+class MailConfiguration(models.Model):
+    """One site-wide configuration; credentials never stored in clear text."""
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    options = models.JSONField(default=dict)
+    encrypted_credentials = models.TextField(blank=True)
+    last_test_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [models.CheckConstraint(condition=models.Q(id=1), name='mail_configuration_singleton')]

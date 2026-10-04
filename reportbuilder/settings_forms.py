@@ -35,8 +35,18 @@ class SettingsMenuForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if self.instance.key == 'mail' or self.instance.url == '/settings/mail/':
+            self.fields['staff_only'].disabled = True
+            self.initial['staff_only'] = True
+            self.fields['staff_only'].help_text = '메일 설정은 항상 관리자 전용입니다.'
         for name, field in self.fields.items():
             field.widget.attrs['aria-label'] = f"{self.instance.label or '새 하위 메뉴'} {field.label}"
+
+    def clean(self):
+        data = super().clean()
+        if self.instance.key == 'mail' or data.get('url') == '/settings/mail/':
+            data['staff_only'] = True
+        return data
 
     def save(self, commit=True):
         if not self.instance.key:

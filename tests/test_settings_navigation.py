@@ -21,7 +21,7 @@ def test_settings_categories_permissions_and_sidebar(client):
         response = client.get(reverse(route))
         assert response.status_code == 200
         assert next(item for item in response.context['settings_sections'] if item['active'])['label'] == selected
-        assert [item['label'] for item in response.context['settings_children']] == [child]
+        assert [item['label'] for item in response.context['settings_children']] == ([child, '메일'] if selected == '기본정보' else [child])
         sidebar = response.context['sidebar_items']
         assert len([item for item in sidebar if item['key'] == 'settings' and item['active']]) == 1
         assert not any(item['key'] in {'company', 'menu_management'} for item in sidebar)

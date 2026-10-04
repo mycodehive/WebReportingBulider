@@ -12,8 +12,9 @@ def visible_settings_sections(request):
 
 
 def visible_settings_children(section, request):
+    staff = bool(request and request.user.is_staff)
     return [child for child in section.menus.all() if child.active and
-            (request.user.is_staff or not child.staff_only)]
+            (staff or (not child.staff_only and child.key != 'mail' and child.url != '/settings/mail/'))]
 
 
 def settings_page_allowed(request, child_key):
@@ -32,8 +33,7 @@ def settings_navigation(section_key=None, child_key=None, request=None):
     for section in visible_settings_sections(request):
         children = [{'key': child.key, 'label': child.label, 'url': child.url,
                      'active': child.key == child_key}
-                    for child in section.menus.all() if child.active and
-                    (request and request.user.is_staff or not child.staff_only)]
+                    for child in visible_settings_children(section, request)]
         if any(child['active'] for child in children):
             selected_key = section.key
         sections.append({'key': section.key, 'label': section.label, 'children': children,
