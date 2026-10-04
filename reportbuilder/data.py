@@ -469,6 +469,28 @@ def _sheet_base(config):
     return "https://sheets.googleapis.com/v4/spreadsheets/" + spreadsheet_id
 
 
+def _public_sheet_numeric_hints(config):
+    """Read declared Google column types; retain CSV strings for existing bindings."""
+    query = {'tqx': 'out:json', 'headers': '1', 'tq': 'limit 0'}
+    if config.get('sheet'):
+        query['sheet'] = str(config['sheet'])
+    else:
+        query['gid'] = str(config.get('gid', '0'))
+    endpoint = 'https://docs.google.com/spreadsheets/d/' + config['spreadsheet_id'] + '/gviz/tq?' + urlencode(query)
+    text = _https_json(endpoint, {}, ['docs.google.com'], csv_text=True)
+    match = re.fullmatch(r'\s*(?:/\*.*?\*/\s*)?google\.visualization\.Query\.setResponse\((\{.*\})\);?\s*', text, re.S)
+    try:
+        payload = json.loads(match.group(1) if match else text)
+        if payload.get('status') not in {'ok', 'warning'}:
+            raise ValueError
+        columns = payload['table']['cols']
+        if not isinstance(columns, list) or any(not isinstance(col, dict) for col in columns):
+            raise ValueError
+        return columns
+    except (ValueError, KeyError, TypeError, AttributeError):
+        raise DataError('INVALID_RESPONSE', '공개 시트의 컬럼 타입 정보를 확인할 수 없습니다.') from None
+
+
 def _sheet_records(config, name, limit):
     header = _integer(config.get("header_row"), 1, 1, 10000)
     if config.get('auth_mode') == 'public':
@@ -582,7 +604,17 @@ def introspect(kind, config):
             if config.get('auth_mode') == 'public':
                 name = config.get('sheet') or '공개 시트'
                 names, rows = _sheet_records(config, name, 100)
-                return {'objects': [_object(name, _columns(names, rows), typ='sheet')]}
+                columns = _columns(names, rows)
+                try:
+                    hints = _public_sheet_numeric_hints(config)
+                except DataError:
+                    # Type hints are optional; a readable CSV remains usable as before.
+                    hints = []
+                if len(hints) == len(columns):
+                    for column, hint in zip(columns, hints):
+                        if hint.get('type') == 'number' and isinstance(hint.get('label'), str) and hint['label'].strip() == column['label']:
+                            column.update(source_type='number', suggested_type='decimal', suggested_conversion='to_decimal')
+                return {'objects': [_object(name, columns, typ='sheet')]}
             payload = _https_json(_sheet_base(config) + "?fields=sheets.properties", _sheet_headers(config), ["sheets.googleapis.com"])
             objects = []
             for sheet in payload.get("sheets", []):

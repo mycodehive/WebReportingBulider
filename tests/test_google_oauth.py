@@ -164,3 +164,25 @@ def test_register_public_and_oauth_through_connection_form(client, setup):
         response = client.post('/connections/', {'name':mode, 'kind':'sheets', 'sheet_url':'https://docs.google.com/spreadsheets/d/abcdefghijk/edit#gid=42', 'sheet_auth_mode':mode, 'sheet_header':'1', 'config':'not JSON'})
         assert response.status_code == 302
         assert Connection.objects.get(name=mode).config['auth_mode'] == mode
+
+
+def test_public_sheet_declared_numeric_hint_preserves_existing_csv_values():
+    import json
+    from urllib.parse import parse_qs, urlsplit
+    config = {'spreadsheet_id': 'abcdefghijk', 'auth_mode': 'public', 'sheet': '훈련일지'}
+    response = {'status': 'ok', 'table': {'cols': [
+        {'label': '코드', 'type': 'string'}, {'label': '거리(Km)', 'type': 'number'}], 'rows': []}}
+
+    def fetch(url, *args, **kwargs):
+        if parse_qs(urlsplit(url).query)['tqx'] == ['out:json']:
+            return '/*O_o*/\ngoogle.visualization.Query.setResponse(' + json.dumps(response) + ');'
+        return '코드,거리(Km)\n001,50.01\n002,62.48\n'
+
+    with patch('reportbuilder.data._https_json', side_effect=fetch):
+        schema = introspect('google_sheets', config)
+        code, distance = schema['objects'][0]['columns']
+        assert code['type'] == 'string' and 'suggested_type' not in code
+        assert distance['type'] == 'string'  # Existing identity/string contracts remain valid.
+        assert distance['source_type'] == 'number'
+        assert distance['suggested_conversion'] == 'to_decimal'
+        assert _sheet_records(config, '훈련일지', 1)[1][0] == {'코드': '001', '거리(Km)': '50.01'}
