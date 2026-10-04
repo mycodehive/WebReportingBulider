@@ -202,7 +202,8 @@ class LLMConfiguration(models.Model):
         COMPATIBLE = 'compatible', 'OpenAI 호환 API'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField('연결명', max_length=120, unique=True)
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, editable=False)
+    name = models.CharField('연결명', max_length=120)
     provider = models.CharField('제공자', max_length=20, choices=Provider.choices)
     model = models.CharField('모델명', max_length=200)
     base_url = models.URLField('API 기본 주소', max_length=500)
@@ -212,6 +213,7 @@ class LLMConfiguration(models.Model):
 
     class Meta:
         ordering = ['name', 'id']
+        constraints = [models.UniqueConstraint(fields=['owner', 'name'], name='unique_user_llm_name')]
 
     def set_api_key(self, value):
         self.encrypted_api_key = Fernet(settings.REPORT_SECRET_KEY.encode()).encrypt(value.encode()).decode()
@@ -223,6 +225,11 @@ class LLMConfiguration(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class LLMModelLookup(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    requested_at = models.DateTimeField(null=True)
 
 
 class PublicShare(models.Model):

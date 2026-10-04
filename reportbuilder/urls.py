@@ -9,6 +9,7 @@ urlpatterns = [
     path('settings/company/', branding.settings, name='company_settings'),
     path('settings/api/internal/', api_settings.internal, name='internal_api_settings'),
     path('settings/api/external/', api_settings.external, name='external_api_settings'),
+    path('settings/api/external/models/', api_settings.models, name='llm_models'),
     path('settings/api/external/<uuid:configuration_id>/', api_settings.external, name='llm_configuration_edit'),
     path('settings/api/external/<uuid:configuration_id>/delete/', api_settings.delete, name='llm_configuration_delete'),
     path('menu-management/', menu_views.menu_management, name='menu_management'),

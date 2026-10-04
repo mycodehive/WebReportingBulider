@@ -2,6 +2,7 @@ from django.db import OperationalError, ProgrammingError
 from django.urls import reverse
 
 from .models import CompanyBranding, WorkspaceMenu
+from .settings_navigation import visible_settings_sections
 
 
 def company_branding(request):
@@ -20,7 +21,7 @@ def workspace_navigation(request):
         {'key': 'reports', 'label': '보고서 라이브러리', 'order': 20, 'url': '/reports/'},
         {'key': 'connections', 'label': '데이터 연결', 'order': 30, 'url': '/connections/'},
         {'key': 'boards', 'label': '게시판', 'order': 40, 'url': '/boards/'},
-        {'key': 'settings', 'label': '환경설정', 'order': 50, 'url': '/settings/', 'staff_only': True},
+        {'key': 'settings', 'label': '환경설정', 'order': 50, 'url': '/settings/', 'staff_only': False},
         {'key': 'manual', 'label': '사용 가이드', 'order': 60, 'url': '/manual/'},
         {'key': 'admin', 'label': '관리 설정', 'order': 70, 'url': '/admin/', 'staff_only': True},
     ]
@@ -46,4 +47,11 @@ def workspace_navigation(request):
             item['active'] = item['active'] or request.path in {
                 reverse('workspace_settings'), reverse('company_settings'), reverse('menu_management'),
             }
+    if not getattr(user, 'is_staff', False):
+        try:
+            has_settings = visible_settings_sections(request).exists()
+        except (OperationalError, ProgrammingError):
+            has_settings = False
+        if not has_settings:
+            items = [item for item in items if item['key'] != 'settings']
     return {'sidebar_items': items}

@@ -151,6 +151,7 @@ class SettingsSection(models.Model):
     label = models.CharField('탭명', max_length=40)
     order = models.IntegerField('순서', default=0)
     active = models.BooleanField('사용', default=True)
+    staff_only = models.BooleanField('관리자 전용', default=True)
 
     class Meta:
         ordering = ['order', 'id']
@@ -166,6 +167,7 @@ class SettingsMenu(models.Model):
     url = models.CharField('내부 주소', max_length=255)
     order = models.IntegerField('순서', default=0)
     active = models.BooleanField('사용', default=True)
+    staff_only = models.BooleanField('관리자 전용', default=True)
 
     class Meta:
         ordering = ['order', 'id']

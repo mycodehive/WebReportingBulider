@@ -29,9 +29,10 @@ def test_settings_categories_permissions_and_sidebar(client):
         assert child in submenu and absent not in submenu
     member = get_user_model().objects.create_user('settings-member')
     client.force_login(member)
-    for route in ('workspace_settings', 'company_settings', 'menu_management'):
+    assert client.get(reverse('workspace_settings')).status_code == 200
+    for route in ('company_settings', 'menu_management'):
         assert client.get(reverse(route)).status_code == 403
-    assert not any(item['key'] == 'settings' for item in client.get('/').context['sidebar_items'])
+    assert any(item['key'] == 'settings' for item in client.get('/').context['sidebar_items'])
     client.logout()
     assert client.get(reverse('workspace_settings')).status_code == 302
 

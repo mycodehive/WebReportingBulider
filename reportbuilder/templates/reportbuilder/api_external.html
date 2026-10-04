@@ -5,14 +5,15 @@
 {% block content %}
 <section class="community-page settings-page">
   {% include 'reportbuilder/settings_navigation.html' %}
-  <div class="community-heading settings-content-heading"><div><h2>외부API</h2><p class="muted">LLM 제공자와 모델, API 연결 정보를 관리합니다. 설정 저장 시 외부 API를 호출하지 않습니다.</p></div></div>
+  <div class="community-heading settings-content-heading"><div><h2>외부API</h2><p class="muted">내 계정의 LLM 연결을 관리합니다. 다른 사용자에게 설정과 API 키가 표시되지 않습니다.</p></div></div>
   <div class="llm-settings-layout">
     <div class="card community-card">
       <h2>{% if configuration %}LLM 설정 수정{% else %}LLM 설정 등록{% endif %}</h2>
-      <form method="post" action="{% if configuration %}{% url 'llm_configuration_edit' configuration.pk %}{% else %}{% url 'external_api_settings' %}{% endif %}" class="community-form llm-settings-form">
-        {% csrf_token %}{{ form.non_field_errors }}
-        {% for field in form %}<div class="field{% if field.name == 'active' %} llm-active-field{% endif %}">
+      <form method="post" action="{% if configuration %}{% url 'llm_configuration_edit' configuration.pk %}{% else %}{% url 'external_api_settings' %}{% endif %}" class="community-form llm-settings-form" id="llm-settings-form" data-models-url="{% url 'llm_models' %}" data-configuration-id="{% if configuration %}{{ configuration.pk }}{% endif %}" data-saved-key="{% if configuration.encrypted_api_key %}true{% else %}false{% endif %}">
+        {% csrf_token %}{{ form.non_field_errors }}{% for field in form.hidden_fields %}{{ field }}{% endfor %}
+        {% for field in form.visible_fields %}<div class="field{% if field.name == 'active' %} llm-active-field{% endif %}">
           {{ field.label_tag }}{{ field }}{% if field.help_text %}<p class="help-text" id="{{ field.auto_id }}_helptext">{{ field.help_text }}</p>{% endif %}{{ field.errors }}
+          {% if field.name == 'api_key' %}<div class="community-actions"><button class="button button-secondary" type="button" id="llm-load-models">모델 불러오기</button></div><p class="help-text" id="llm-model-status" role="status" aria-live="polite">API 키를 입력하고 모델 불러오기를 누른 뒤 모델을 선택하세요.</p>{% endif %}
         </div>{% endfor %}
         <p class="help-text">API 키는 암호화해 저장하며 화면에 다시 표시하지 않습니다.</p>
         <div class="community-actions"><button class="button button-primary" type="submit">{% if configuration %}변경사항 저장{% else %}LLM 설정 등록{% endif %}</button>{% if configuration %}<a class="button button-secondary" href="{% url 'external_api_settings' %}">취소</a>{% endif %}</div>
@@ -29,5 +30,6 @@
     </div>
   </div>
 </section>
+{{ provider_base_urls|json_script:'llm-provider-base-urls' }}
 {% endblock %}
-{% block scripts %}{% include 'reportbuilder/boards/scripts.html' %}{% endblock %}
+{% block scripts %}{% include 'reportbuilder/boards/scripts.html' %}<script src="{% static 'reportbuilder/llm-settings.js' %}" defer></script>{% endblock %}

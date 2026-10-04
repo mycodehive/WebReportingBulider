@@ -68,6 +68,7 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 55 * 1024 * 1024
 FILE_UPLOAD_MAX_MEMORY_SIZE = 2 * 1024 * 1024
 REPORT_MAX_ROWS = int(os.environ.get("REPORT_MAX_ROWS", 10000))
 REPORT_REST_ALLOWED_HOSTS = [h.strip() for h in os.environ.get("REPORT_REST_ALLOWED_HOSTS", "").split(",") if h.strip()]
+REPORT_LLM_ALLOWED_HOSTS = [h.strip().lower() for h in os.environ.get("REPORT_LLM_ALLOWED_HOSTS", "").split(",") if h.strip()]
 EMBED_ALLOWED_ORIGINS = [h.strip() for h in os.environ.get("EMBED_ALLOWED_ORIGINS", "").split(",") if h.strip()]
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"

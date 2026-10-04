@@ -389,7 +389,7 @@ class _PinnedHTTPS(http.client.HTTPSConnection):
         self.sock = self._context.wrap_socket(raw, server_hostname=self.host)
 
 
-def _https_json(endpoint, headers=None, allowed_hosts=None, *, csv_text=False, gviz_text=False):
+def _https_json(endpoint, headers=None, allowed_hosts=None, *, csv_text=False, gviz_text=False, max_response_bytes=_SOURCE_BYTES):
     """Exact host allowlist, public DNS/IP, TLS validation, no redirects or proxies.
 
     DNS is resolved once and the HTTPS socket is pinned to that validated address,
@@ -428,8 +428,8 @@ def _https_json(endpoint, headers=None, allowed_hosts=None, *, csv_text=False, g
             raise DataError('AUTH_REQUIRED', '공개 시트를 읽을 수 없습니다. 링크 공개/다운로드 권한을 확인하거나 OAuth로 연결하세요.')
         if response.status != 200:
             raise DataError("REMOTE_ERROR", "자료 API가 정상 응답하지 않았습니다. 연결 권한과 고정 주소를 확인하세요.")
-        raw = response.read(_SOURCE_BYTES + 1)
-        if len(raw) > _SOURCE_BYTES:
+        raw = response.read(max_response_bytes + 1)
+        if len(raw) > max_response_bytes:
             raise DataError("DATA_LIMIT", "자료 API 응답이 허용 크기를 초과했습니다.")
         if csv_text or gviz_text:
             content_type = response.getheader('Content-Type', '').split(';')[0].lower()

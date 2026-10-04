@@ -8,7 +8,7 @@
   <div class="card community-card">
     {% if settings_children %}<h2>설정 화면 선택</h2><p class="muted">위 하위 메뉴를 선택하면 등록한 화면으로 이동합니다.</p>
     {% else %}<h2>등록된 하위 메뉴가 없습니다.</h2><p class="muted">메뉴관리에서 탭과 하위 메뉴를 추가하거나 사용으로 설정하세요.</p>{% endif %}
-    <a class="button button-secondary" href="{% url 'menu_management' %}">메뉴관리 열기</a>
+    {% if user.is_staff %}<a class="button button-secondary" href="{% url 'menu_management' %}">메뉴관리 열기</a>{% endif %}
   </div>
 </section>
 {% endblock %}

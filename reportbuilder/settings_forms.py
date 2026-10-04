@@ -9,7 +9,7 @@ from .models import SettingsMenu, SettingsSection
 class SettingsSectionForm(forms.ModelForm):
     class Meta:
         model = SettingsSection
-        fields = ['label', 'order', 'active']
+        fields = ['label', 'order', 'staff_only', 'active']
         widgets = {'label': forms.TextInput(attrs={'class': 'input'}),
                    'order': forms.NumberInput(attrs={'class': 'input'})}
 
@@ -27,7 +27,7 @@ class SettingsSectionForm(forms.ModelForm):
 class SettingsMenuForm(forms.ModelForm):
     class Meta:
         model = SettingsMenu
-        fields = ['section', 'label', 'url', 'order', 'active']
+        fields = ['section', 'label', 'url', 'order', 'staff_only', 'active']
         widgets = {'section': forms.Select(attrs={'class': 'input'}),
                    'label': forms.TextInput(attrs={'class': 'input'}),
                    'url': forms.TextInput(attrs={'class': 'input', 'placeholder': '/settings/company/'}),

@@ -13,10 +13,10 @@
       {% csrf_token %}<input type="hidden" name="action" value="save_settings_sections">
       {{ section_forms.management_form }}{{ section_forms.non_form_errors }}
       <div class="table-wrap" tabindex="0" role="region" aria-label="환경설정 탭 관리 표">
-        <table class="table"><thead><tr><th>탭명</th><th>순서</th><th>사용</th><th>삭제</th></tr></thead><tbody>
+        <table class="table"><thead><tr><th>탭명</th><th>순서</th><th>관리자 전용</th><th>사용</th><th>삭제</th></tr></thead><tbody>
         {% for form in section_forms %}<tr>
           <td>{% for field in form.hidden_fields %}{{ field }}{{ field.errors }}{% endfor %}{{ form.non_field_errors }}{{ form.label }}{{ form.label.errors }}</td>
-          <td>{{ form.order }}{{ form.order.errors }}</td><td>{{ form.active }}</td><td>{{ form.DELETE }}</td>
+          <td>{{ form.order }}{{ form.order.errors }}</td><td>{{ form.staff_only }}</td><td>{{ form.active }}</td><td>{{ form.DELETE }}</td>
         </tr>{% endfor %}
         </tbody></table>
       </div>
@@ -25,16 +25,16 @@
   </div>
   <div class="card community-card settings-management-card">
     <h2>환경설정 하위 메뉴</h2>
-    <p class="muted">소속 탭·메뉴명·연결할 화면의 내부 주소를 설정합니다. 마지막 빈 행에서 새 메뉴를 추가하세요. 탭과 하위 메뉴는 관리자 전용이며, 사용 여부는 메뉴 표시만 제어합니다.</p>
+    <p class="muted">탭과 하위 메뉴의 관리자 전용을 모두 해제하면 일반 사용자에게 표시됩니다. 실제 화면의 고유 권한도 함께 적용되어 회사로고·메뉴관리는 계속 관리자만 이용합니다.</p>
     <form action="{% url 'menu_management' %}" method="post" class="settings-children-form">
       {% csrf_token %}<input type="hidden" name="action" value="save_settings_children">
       {{ settings_menu_forms.management_form }}{{ settings_menu_forms.non_form_errors }}
       <div class="table-wrap" tabindex="0" role="region" aria-label="환경설정 하위 메뉴 관리 표">
-        <table class="table"><thead><tr><th>중메뉴 탭</th><th>하위 메뉴명</th><th>내부 주소</th><th>순서</th><th>사용</th><th>삭제</th></tr></thead><tbody>
+        <table class="table"><thead><tr><th>중메뉴 탭</th><th>하위 메뉴명</th><th>내부 주소</th><th>순서</th><th>관리자 전용</th><th>사용</th><th>삭제</th></tr></thead><tbody>
         {% for form in settings_menu_forms %}<tr>
           <td>{% for field in form.hidden_fields %}{{ field }}{{ field.errors }}{% endfor %}{{ form.non_field_errors }}{{ form.section }}{{ form.section.errors }}</td>
           <td>{{ form.label }}{{ form.label.errors }}</td><td>{{ form.url }}{{ form.url.errors }}</td>
-          <td>{{ form.order }}{{ form.order.errors }}</td><td>{{ form.active }}</td><td>{{ form.DELETE }}</td>
+          <td>{{ form.order }}{{ form.order.errors }}</td><td>{{ form.staff_only }}</td><td>{{ form.active }}</td><td>{{ form.DELETE }}</td>
         </tr>{% endfor %}
         </tbody></table>
       </div>
