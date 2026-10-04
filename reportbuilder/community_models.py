@@ -144,3 +144,42 @@ class WorkspaceMenu(models.Model):
 
     def __str__(self):
         return self.label
+
+
+class SettingsSection(models.Model):
+    key = models.SlugField(max_length=50, unique=True)
+    label = models.CharField('탭명', max_length=40)
+    order = models.IntegerField('순서', default=0)
+    active = models.BooleanField('사용', default=True)
+
+    class Meta:
+        ordering = ['order', 'id']
+
+    def __str__(self):
+        return self.label
+
+
+class SettingsMenu(models.Model):
+    key = models.SlugField(max_length=50, unique=True)
+    section = models.ForeignKey(SettingsSection, on_delete=models.CASCADE, related_name='menus', verbose_name='중메뉴 탭')
+    label = models.CharField('하위 메뉴명', max_length=40)
+    url = models.CharField('내부 주소', max_length=255)
+    order = models.IntegerField('순서', default=0)
+    active = models.BooleanField('사용', default=True)
+
+    class Meta:
+        ordering = ['order', 'id']
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        value = self.url.strip()
+        parsed = urlsplit(value)
+        if (not value.startswith('/') or value.startswith('//') or parsed.scheme or parsed.netloc
+                or '\\' in value or any(ord(c) < 32 for c in value)):
+            raise ValidationError({'url': '사이트 내부 경로(/로 시작)만 입력해 주세요.'})
+        if parsed.path == '/settings/' or parsed.path.startswith('/settings/sections/'):
+            raise ValidationError({'url': '탭 이동 주소 대신 실제 콘텐츠 화면 주소를 입력해 주세요.'})
+        self.url = value
+
+    def __str__(self):
+        return self.label

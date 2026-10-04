@@ -8,7 +8,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.contrib.staticfiles import finders
 
-from reportbuilder.models import WorkspaceMenu
+from reportbuilder.models import WorkspaceMenu, SettingsSection, SettingsMenu
 
 
 @pytest.mark.django_db(transaction=True)
@@ -27,7 +27,13 @@ def test_settings_tabs_light_dark_desktop_mobile(client, monkeypatch):
             assert asset, path
             route.fulfill(body=Path(asset).read_bytes(), content_type=mimetypes.guess_type(path)[0])
         else:
-            response = client.get(path)
+            if route.request.method == 'POST':
+                response = client.post(path, data=route.request.post_data,
+                                       content_type='application/x-www-form-urlencoded')
+                if response.status_code == 302:
+                    response = client.get(response['Location'])
+            else:
+                response = client.get(path)
             route.fulfill(status=response.status_code, body=response.content,
                           content_type='text/html')
 
@@ -61,6 +67,7 @@ def test_settings_tabs_light_dark_desktop_mobile(client, monkeypatch):
                 assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1')
                 page.screenshot(path=str(shots / f'basic-{theme}-{width}.png'), full_page=True)
                 tabs.get_by_role('link', name='사이트관리').click()
+                page.wait_for_load_state('networkidle')
                 page.evaluate('theme => document.documentElement.dataset.theme = theme', theme)
                 playwright.expect(tabs.get_by_role('link', name='사이트관리')).to_have_attribute('aria-current', 'page')
                 playwright.expect(children.get_by_role('link', name='메뉴관리')).to_be_visible()
@@ -73,5 +80,19 @@ def test_settings_tabs_light_dark_desktop_mobile(client, monkeypatch):
                 page.screenshot(path=str(shots / f'site-{theme}-{width}.png'), full_page=True)
                 tabs.get_by_role('link', name='기본정보').click()
                 playwright.expect(children.get_by_role('link', name='회사로고')).to_be_visible()
+        page.goto('http://testserver/menu-management/')
+        section_form = page.locator('.settings-section-form')
+        section_form.locator('input[name$="-label"]').last.fill('운영관리')
+        section_form.get_by_role('button', name='탭 설정 저장').click()
+        playwright.expect(page.get_by_role('navigation', name='환경설정 분류').get_by_role('link', name='운영관리')).to_be_visible()
+        section = SettingsSection.objects.get(label='운영관리')
+        child_form = page.locator('.settings-children-form')
+        child_form.locator('select[name$="-section"]').last.select_option(str(section.pk))
+        child_form.locator('input[name$="-label"]').last.fill('운영 가이드')
+        child_form.locator('input[name$="-url"]').last.fill('/manual/')
+        child_form.get_by_role('button', name='하위 메뉴 설정 저장').click()
+        page.get_by_role('navigation', name='환경설정 분류').get_by_role('link', name='운영관리').click()
+        playwright.expect(page.get_by_role('navigation', name='선택한 설정의 하위 메뉴').get_by_role('link', name='운영 가이드')).to_be_visible()
+        assert SettingsMenu.objects.filter(section=section, label='운영 가이드', url='/manual/').exists()
         assert not errors
         browser.close()

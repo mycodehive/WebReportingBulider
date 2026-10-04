@@ -69,4 +69,4 @@ def settings(request):
                 branding.logo.storage.delete(previous)
             messages.success(request, '회사 정보를 저장했습니다.')
             return redirect('company_settings')
-    return render(request, 'reportbuilder/company_settings.html', {'form': form, 'branding': branding, **settings_navigation('basic', 'company')})
+    return render(request, 'reportbuilder/company_settings.html', {'form': form, 'branding': branding, **settings_navigation('basic', 'company', request)})

@@ -5,6 +5,7 @@
 .settings-tabs {
   display: flex;
   align-items: stretch;
+  overflow-x: auto;
   gap: 6px;
   padding: 0 12px;
   border-bottom: 1px solid var(--border);
@@ -15,6 +16,8 @@
   align-items: center;
   justify-content: center;
   min-width: 136px;
+  flex-shrink: 0;
+  white-space: nowrap;
   min-height: 48px;
   padding: 12px 24px;
   margin-bottom: -1px;
@@ -72,7 +75,13 @@
 .settings-page .menu-management-form .table { min-width: 800px; }
 @media (max-width: 480px) {
   .settings-tabs { padding: 0 8px; }
-  .settings-tabs a { flex: 1; min-width: 0; padding-right: 14px; padding-left: 14px; }
+  .settings-tabs a { flex: 0 0 auto; min-width: 112px; padding-right: 14px; padding-left: 14px; }
   .settings-submenu { padding: 12px; }
   .settings-heading p { line-height: 1.7; }
 }
+
+.settings-management-card { margin-bottom: 20px; }
+.settings-management-card .table { min-width: 520px; }
+.settings-children-form .table { min-width: 900px; }
+.settings-management-card .input { min-height: 40px; }
+.settings-management-card .errorlist { color: var(--danger); padding-left: 18px; margin: 8px 0; }

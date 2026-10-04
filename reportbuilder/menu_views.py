@@ -11,6 +11,7 @@ from django.views.decorators.http import require_http_methods
 
 from .community_models import MenuConfiguration, default_menu_items
 from .models import WorkspaceMenu
+from .settings_forms import SectionFormSet, SettingsMenuFormSet
 from .settings_navigation import settings_navigation
 
 
@@ -37,6 +38,22 @@ def unique_menu_key(label):
 def menu_management(request):
     if not request.user.is_staff:
         return HttpResponseForbidden("메뉴 관리는 전체 관리자만 이용할 수 있습니다.")
+
+    action = request.POST.get("action", "save") if request.method == "POST" else None
+    section_forms = SectionFormSet(request.POST if action == "save_settings_sections" else None, prefix="sections")
+    settings_menu_forms = SettingsMenuFormSet(request.POST if action == "save_settings_children" else None, prefix="children")
+    if action in {"save_settings_sections", "save_settings_children"}:
+        forms = section_forms if action == "save_settings_sections" else settings_menu_forms
+        if forms.is_valid():
+            with transaction.atomic():
+                forms.save()
+            messages.success(request, "환경설정 메뉴를 저장했습니다.")
+            return redirect("menu_management")
+        messages.error(request, "환경설정 메뉴 입력값을 확인해 주세요.")
+        return render(request, "reportbuilder/menu_management.html", {
+            "items": WorkspaceMenu.objects.all(), "section_forms": section_forms,
+            "settings_menu_forms": settings_menu_forms, **settings_navigation("site", "menus", request),
+        })
 
     if request.method == "POST":
         action = request.POST.get("action", "save")
@@ -118,4 +135,5 @@ def menu_management(request):
         return redirect("menu_management")
 
     items = WorkspaceMenu.objects.all()
-    return render(request, "reportbuilder/menu_management.html", {"items": items, **settings_navigation("site", "menus")})
+    return render(request, "reportbuilder/menu_management.html", {"items": items, "section_forms": section_forms, "settings_menu_forms": settings_menu_forms,
+                                                                  **settings_navigation("site", "menus", request)})

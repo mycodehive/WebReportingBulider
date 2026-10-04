@@ -1,0 +1,14 @@
+{% extends 'reportbuilder/base.html' %}
+{% load static %}
+{% block title %}환경설정{% endblock %}
+{% block head %}<link rel="stylesheet" href="{% static 'reportbuilder/settings-navigation.css' %}">{% endblock %}
+{% block content %}
+<section class="community-page settings-page">
+  {% include 'reportbuilder/settings_navigation.html' %}
+  <div class="card community-card">
+    {% if settings_children %}<h2>설정 화면 선택</h2><p class="muted">위 하위 메뉴를 선택하면 등록한 화면으로 이동합니다.</p>
+    {% else %}<h2>등록된 하위 메뉴가 없습니다.</h2><p class="muted">메뉴관리에서 탭과 하위 메뉴를 추가하거나 사용으로 설정하세요.</p>{% endif %}
+    <a class="button button-secondary" href="{% url 'menu_management' %}">메뉴관리 열기</a>
+  </div>
+</section>
+{% endblock %}
