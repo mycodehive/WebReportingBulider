@@ -59,9 +59,13 @@
   function fields(){
    const ds=context.datasets().find(d=>d.dataset_id===$('infographic-dataset').value);
    for(const [id,numeric] of [['infographic-label',false],['infographic-value',true]]){
-    const select=$(id);select.replaceChildren();
-    for(const f of ds?.fields||[]){if(numeric&&!['number','integer','decimal'].includes(f.type))continue;const option=document.createElement('option');option.value=f.field_id;option.textContent=f.label||f.alias;select.append(option);}
+    const select=$(id),old=select.value;select.replaceChildren();
+    if(numeric){const placeholder=document.createElement('option');placeholder.value='';placeholder.textContent='수치 필드를 선택하세요';select.append(placeholder);}
+    for(const f of ds?.fields||[]){if(numeric&&!['number','integer','decimal','string'].includes(f.type))continue;const option=document.createElement('option');option.value=f.field_id;option.textContent=(f.label||f.alias||f.field_id)+(numeric&&f.type==='string'?' (문자열 → 숫자변환)':'');select.append(option);}
+    if([...select.options].some(o=>o.value===old))select.value=old;
+    if(numeric&&!select.value){const first=ds?.fields?.find(f=>['number','integer','decimal'].includes(f.type));if(first)select.value=first.field_id;}
    }
+   $('infographic-field-help').textContent=!ds?'데이터 탭에서 연결과 테이블을 선택하고 데이터셋을 추가하세요.':!ds.fields.some(f=>['number','integer','decimal','string'].includes(f.type))?'수치로 사용할 필드가 없습니다. 숫자 또는 문자열 필드가 있는 데이터셋을 선택하세요.':'문자열 필드는 선택 시 숫자로 변환합니다. 숫자만 입력된 열을 선택하세요 (예: 1200, 12.5).';
   }
   function invalidate(){++generation;ready=null;$('infographic-insert').disabled=true;$('infographic-preview').hidden=true;}
   panel.addEventListener('input',invalidate);
@@ -78,7 +82,9 @@
     else{
      const parameters=JSON.parse($('infographic-parameters').value||'{}');
      if(!parameters||Array.isArray(parameters)||typeof parameters!=='object')throw new Error('보고서 입력값은 JSON 객체로 입력하세요.');
-     points=(await context.data({dataset_id:$('infographic-dataset').value,label_id:$('infographic-label').value,value_id:$('infographic-value').value,aggregation:$('infographic-aggregation').value,parameters})).points;
+     const ds=context.datasets().find(d=>d.dataset_id===$('infographic-dataset').value),valueField=ds?.fields.find(f=>f.field_id===$('infographic-value').value);
+     if(!ds||!$('infographic-label').value||!valueField)throw new Error('데이터셋, 항목 필드, 수치 필드를 선택하세요.');
+     points=(await context.data({value_conversion:valueField.type==='string'?'to_decimal':'identity',dataset_id:$('infographic-dataset').value,label_id:$('infographic-label').value,value_id:$('infographic-value').value,aggregation:$('infographic-aggregation').value,parameters})).points;
     }
     if(current!==generation)return;
     ready=draw($('infographic-preview'),points,config);

@@ -524,8 +524,14 @@ def infographic_data_api(request, report_id):
     if not contract:
         raise DefinitionError('데이터셋을 먼저 연결하세요.')
     fields = {field['field_id']: field for field in contract['fields']}
-    if label_id not in fields or value_id not in fields or fields[value_id]['type'] not in {'integer', 'decimal', 'number'}:
-        raise DefinitionError('항목 필드와 숫자 형식의 수치 필드를 선택하세요.')
+    conversion = data.get('value_conversion', 'identity')
+    if conversion not in {'identity', 'to_decimal'}:
+        raise DefinitionError('지원하지 않는 수치 변환입니다.')
+    if label_id not in fields or value_id not in fields:
+        raise DefinitionError('항목 필드와 수치 필드를 선택하세요.')
+    value_type = fields[value_id]['type']
+    if value_type not in {'integer', 'decimal', 'number'} and not (value_type == 'string' and conversion == 'to_decimal'):
+        raise DefinitionError('문자열 수치 필드는 숫자변환을 선택하세요. 날짜·불리언·이미지는 수치로 사용할 수 없습니다.')
     aggregation = data.get('aggregation', 'sum')
     if aggregation not in {'sum', 'avg'}:
         raise ValueError('Invalid aggregation')
@@ -533,12 +539,12 @@ def infographic_data_api(request, report_id):
     groups = {}
     for row in results[dataset_id]['rows']:
         value = row.get(value_id)
-        if value is None:
+        if value is None or (isinstance(value, str) and not value.strip()):
             continue
         try:
             number = Decimal(str(value))
         except InvalidOperation:
-            raise DefinitionError('수치 필드에 숫자가 아닌 값이 있습니다. 필드 매핑을 확인하세요.') from None
+            raise DefinitionError('수치 필드에 숫자가 아닌 값이 있습니다. 숫자만 있는 열을 선택하세요. 쉼표·통화기호·%는 제거해야 합니다.') from None
         if not number.is_finite() or abs(number) > Decimal('1e15'):
             raise DefinitionError('수치는 유한한 숫자이고 절댓값이 1,000조 이하여야 합니다.')
         label = str(row.get(label_id) if row.get(label_id) is not None else '미분류')[:200]

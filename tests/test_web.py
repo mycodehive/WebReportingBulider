@@ -471,3 +471,21 @@ def test_published_report_can_be_deleted_from_library(author_client, data_report
     assert not Report.objects.filter(pk=report.pk).exists()
     assert not Publication.objects.filter(report=report).exists()
     assert not Revision.objects.filter(report_id=report.pk).exists()
+
+
+def test_infographic_explicit_string_conversion_and_invalid_values(author_client, data_report):
+    report, _ = data_report
+    amount = next(f for f in report.definition['datasets'][0]['fields'] if f['field_id'] == 'amount')
+    amount['type'] = 'string'
+    report.bindings[0]['field_mappings']['amount']['conversion'] = 'identity'
+    report.save(update_fields=['definition', 'bindings'])
+    endpoint = f'/api/reports/{report.pk}/infographic-data/'
+    data = {'dataset_id': 'sales', 'label_id': 'department', 'value_id': 'amount'}
+    assert post(author_client, endpoint, data).status_code == 400
+    data['value_conversion'] = 'to_decimal'
+    response = post(author_client, endpoint, data)
+    assert response.status_code == 200, response.content
+    assert response.json()['points'] == [{'label': 'A', 'value': 300}]
+    assert post(author_client, endpoint, {**data, 'aggregation': 'avg'}).json()['points'] == [{'label': 'A', 'value': 150}]
+    assert post(author_client, endpoint, {**data, 'value_id': 'customer'}).status_code == 400
+    assert post(author_client, endpoint, {**data, 'value_conversion': 'guess'}).status_code == 400
