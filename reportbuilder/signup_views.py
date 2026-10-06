@@ -28,7 +28,7 @@ def signup(request):
         if demo_ready:
             messages.info(request, "데모 보고서를 준비했습니다. 보고서 라이브러리에서 확인하세요.")
         else:
-            messages.warning(request, "데모 보고서 생성에 실패했습니다. 보고서 라이브러리에서 다시 시도할 수 있습니다.")
+            messages.warning(request, "계정은 정상적으로 생성되었습니다. 데모 보고서는 메일 인증 완료 후 보고서 라이브러리에서 다시 준비할 수 있습니다.")
         try:
             send_verification(user, request)
             messages.info(request, "인증 메일을 발송했습니다. 메일 주소를 인증하면 서비스를 이용할 수 있습니다.")

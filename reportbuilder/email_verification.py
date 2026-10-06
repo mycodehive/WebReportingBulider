@@ -14,6 +14,7 @@ from django.utils.crypto import constant_time_compare, salted_hmac
 
 from . import mail_settings
 from .analytics import client_address
+from .site_origin import inferred_service_url
 from .models import EmailVerification, EmailVerificationLimit, MailConfiguration
 
 TOKEN_LIFETIME = timedelta(hours=24)
@@ -58,7 +59,7 @@ def delivery_configuration(request):
     config = MailConfiguration.objects.filter(pk=1).first()
     if not config or not mail_settings.MailForm(config.options, configuration=config).is_valid():
         raise VerificationError('메일 발송 설정이 준비되지 않았습니다. 관리자에게 문의하세요.')
-    origin = config.options.get('site_url', '')
+    origin = config.options.get('site_url', '') or inferred_service_url()
     if not origin and settings.DEBUG:
         origin = request.build_absolute_uri('/').rstrip('/')
     parts = urlsplit(origin)

@@ -1,13 +1,23 @@
-import csv
-import io
+import logging
 
 from django.contrib.auth import get_user_model
-from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from reportbuilder.definition import validate_definition
+from reportbuilder.demo_data import SALES_DEMO
 from reportbuilder.models import Connection, DemoSeed, Project, Publication, Report, Revision
+
+
+logger = logging.getLogger(__name__)
+
+
+def remove_legacy_demo_file(storage, name):
+    try:
+        storage.delete(name)
+    except Exception:
+        # The replacement demo has committed; an orphan must not report seed failure.
+        logger.warning("Legacy demo file cleanup failed", exc_info=True)
 
 
 def demo_definition():
@@ -85,19 +95,16 @@ class Command(BaseCommand):
             marker.save(update_fields=["completed"])
             self.stdout.write("예제가 이미 존재합니다. 다시 만들려면 --reset 옵션을 사용하세요.")
             return
-        text = io.StringIO()
-        writer = csv.writer(text)
-        writer.writerow(["department", "customer", "amount"])
-        for index in range(65):
-            writer.writerow([f"영업 {index // 25 + 1}팀", f"예제 고객 {index + 1:02d}", 100000 + index * 2500])
-        connection = Connection.objects.create(owner=user, name="합성 매출 CSV", kind="csv", config={"encoding": "utf-8-sig"},
-                                                upload=ContentFile(text.getvalue().encode("utf-8-sig"), name="sales.csv"))
+        # Seeding must also work when the deployment's media directory is read-only.
+        # Each user owns a distinct connection; only the fixed synthetic rows are shared.
+        connection = Connection.objects.create(owner=user, name="합성 매출 CSV", kind="csv",
+                                                config={"encoding": "utf-8-sig", "_builtin_demo": SALES_DEMO})
         project = Project.objects.create(owner=user, name="매출 현황 예제")
         binding = {"dataset_id": "sales", "connection_id": str(connection.pk),
                    "object_mappings": {"sales_rows": {"schema": None, "object": "sales"}},
                    "field_mappings": {id: {"column": id, "conversion": "to_decimal" if id == "amount" else "identity"}
                                       for id in ["department", "customer", "amount"]}}
-        # File object names are the server filename stem; use introspection instead of assuming the client filename.
+        # Resolve the object name through the same adapter used by report execution.
         from reportbuilder.data import introspect
         binding["object_mappings"]["sales_rows"]["object"] = introspect("csv", connection.runtime_config())["objects"][0]["object"]
         definition = demo_definition()
@@ -149,7 +156,7 @@ def reset_demo(user):
             if connection.upload:
                 upload_name = connection.upload.name
                 storage = connection.upload.storage
-                transaction.on_commit(lambda storage=storage, upload_name=upload_name: storage.delete(upload_name))
+                transaction.on_commit(lambda storage=storage, upload_name=upload_name: remove_legacy_demo_file(storage, upload_name))
             connection.delete()
             removed_connections += 1
     return len(report_ids), removed_connections

@@ -130,7 +130,7 @@ def ensure_demo(request):
     marker = DemoSeed.objects.select_for_update().get(pk=marker.pk)
     if not marker.completed:
         if not prepare_user_demo(request.user):
-            return JsonResponse({"ready": False, "message": "데モ報告書"}, status=503)
+            return JsonResponse({"ready": False, "message": "데모 보고서를 준비하지 못했습니다. 다시 시도하거나 관리자에게 문의하세요."}, status=503)
     return JsonResponse({"ready": True})
 
 

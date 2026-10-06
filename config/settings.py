@@ -74,6 +74,9 @@ EMBED_ALLOWED_ORIGINS = [h.strip() for h in os.environ.get("EMBED_ALLOWED_ORIGIN
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_HTTPONLY = False
+CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in os.environ.get(
+    "DJANGO_CSRF_TRUSTED_ORIGINS", os.environ.get("CSRF_TRUSTED_ORIGINS", "")
+).split(",") if origin.strip()]
 X_FRAME_OPTIONS = "DENY"
 SECURE_CONTENT_TYPE_NOSNIFF = True
 if not DEBUG:

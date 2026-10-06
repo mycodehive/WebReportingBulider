@@ -23,6 +23,7 @@ from django.views.decorators.http import require_http_methods
 
 from .models import MailConfiguration
 from .settings_navigation import settings_navigation
+from .site_origin import inferred_service_url
 
 REGIONS = [(r, label + ' · ' + r) for r, label in [
     ('ap-northeast-2', 'Asia Pacific (Seoul)'), ('ap-northeast-1', 'Asia Pacific (Tokyo)'),
@@ -60,12 +61,14 @@ class MailForm(forms.Form):
     sender_email = forms.EmailField(label='발신자 이메일', max_length=254)
     sender_name = forms.CharField(label='발신자 이름', max_length=120)
     site_url = forms.URLField(label='서비스 주소 (인증 메일 링크)', required=False, max_length=500, assume_scheme='https',
-                              help_text='운영 시 https://reports.example.com처럼 외부에서 접속 가능한 주소를 지정하세요.')
+                              help_text='HTTPS 서비스 주소입니다. 허용 도메인이 하나이면 자동으로 채웁니다. 여러 도메인이면 대표 주소를 직접 지정하세요.')
 
     def __init__(self, *args, configuration, **kwargs):
         self.configuration = configuration
         self.stored_secrets = secrets(configuration)
         super().__init__(*args, label_suffix='', initial=configuration.options, **kwargs)
+        if not self.initial.get('site_url'):
+            self.initial['site_url'] = inferred_service_url()
         for name, field in self.fields.items():
             field.widget.attrs['class'] = 'input'
             if name in SECRET_FIELDS:
@@ -189,9 +192,12 @@ def mail(request):
         elif not testing and form.is_valid():
             form.save()
             messages.success(request, '메일 설정을 저장했습니다.')
+            if not settings.DEBUG and not (config.options.get('site_url') or inferred_service_url()):
+                messages.warning(request, '인증 메일을 보내려면 서비스 주소를 입력하고 저장하세요. 메일 서버 테스트는 인증 링크 주소를 검사하지 않습니다.')
             return redirect('mail_settings')
     groups = [(provider, label, [form[name] for name in GROUPS[provider]]) for provider, label in [('smtp', 'SMTP 설정'), ('mailgun', 'Mailgun 설정'), ('ses', 'SES (Amazon) 설정')]]
     response = render(request, 'reportbuilder/mail_settings.html', {'form': form, 'test_form': test_form, 'groups': groups,
-                      'saved': bool(config.options), **settings_navigation('basic', 'mail', request)})
+                      'saved': bool(config.options),
+                      'verification_origin_missing': not settings.DEBUG and not (config.options.get('site_url') or inferred_service_url()), **settings_navigation('basic', 'mail', request)})
     response['Cache-Control'] = 'no-store'
     return response

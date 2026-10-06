@@ -98,3 +98,75 @@ def test_verification_and_admin_batch_themes(client, monkeypatch, settings):
                 page.screenshot(path=str(shots / f'{theme}-{width}-admin.png'), full_page=True)
         assert not errors
         browser.close()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_https_logout_and_verification_with_browser_csrf(monkeypatch, settings):
+    from django.test import Client
+
+    playwright = pytest.importorskip('playwright.sync_api')
+    monkeypatch.setenv('DJANGO_ALLOW_ASYNC_UNSAFE', 'true')
+    settings.DEBUG = True
+    settings.ALLOWED_HOSTS = ['wrb.writeaday.click']
+    config = MailConfiguration.objects.create(pk=1)
+    data = payload()
+    data['site_url'] = 'https://wrb.writeaday.click'
+    form = mail_settings.MailForm(data, configuration=config)
+    assert form.is_valid(), form.errors
+    form.save()
+    sender = Mock()
+    monkeypatch.setattr(mail_settings, 'send_message', sender)
+    user = get_user_model().objects.create_user('https-browser', email='browser@example.com')
+    EmailVerification.objects.create(user=user, required=True)
+    client = Client(enforce_csrf_checks=True)
+    client.force_login(user)
+    responses = []
+
+    def serve(route):
+        req = route.request
+        path = urlparse(req.url).path
+        if path.startswith('/static/'):
+            asset = finders.find(path.removeprefix('/static/'))
+            if not asset:
+                route.fulfill(status=404)
+            else:
+                route.fulfill(body=Path(asset).read_bytes(), content_type=mimetypes.guess_type(path)[0])
+            return
+        headers = {'secure': True, 'HTTP_HOST': 'wrb.writeaday.click'}
+        if req.headers.get('referer'):
+            headers['HTTP_REFERER'] = req.headers['referer']
+        if req.headers.get('origin'):
+            headers['HTTP_ORIGIN'] = req.headers['origin']
+        if req.method == 'POST':
+            response = client.post(path, data=req.post_data_buffer, content_type=req.headers.get('content-type', 'application/x-www-form-urlencoded'), **headers)
+            responses.append((path, response.status_code))
+        else:
+            response = client.get(path, **headers)
+        # Keep redirects inside the test bridge; preserve the final page policy.
+        for _ in range(3):
+            if response.status_code != 302:
+                break
+            response = client.get(response['Location'], secure=True, HTTP_HOST='wrb.writeaday.click')
+        forwarded = {name: value for name, value in response.items() if name.lower() != 'content-length'}
+        route.fulfill(status=response.status_code, body=response.content, headers=forwarded)
+
+    with playwright.sync_playwright() as api:
+        browser = api.chromium.launch(executable_path=os.environ.get('PLAYWRIGHT_EXECUTABLE_PATH'))
+        page = browser.new_page()
+        page.route('https://wrb.writeaday.click/**', serve)
+        page.goto('https://wrb.writeaday.click/accounts/email/')
+        with page.expect_response(lambda response: response.url.endswith('/accounts/email/resend/')) as resend:
+            page.get_by_role('button', name='인증 메일 다시 보내기').click()
+        assert resend.value.status == 200, (responses, resend.value.text())
+        assert sender.call_count == 1
+        playwright.expect(page.get_by_text('인증 메일을 발송했습니다. 받은 편지함과 스팸함을 확인하세요.', exact=True)).to_be_visible()
+        link = re.search(r'https://wrb.writeaday.click/accounts/email/verify/\S+', sender.call_args.args[3])[0]
+        page.goto(link)
+        page.get_by_role('button', name='메일 인증 완료').click()
+        playwright.expect(page.get_by_role('heading', name='메일 인증이 완료되었습니다.')).to_be_visible()
+        page.goto('https://wrb.writeaday.click/accounts/email/')
+        page.get_by_role('button', name='로그아웃', exact=True).click()
+        playwright.expect(page.get_by_role('heading', name='보고서 작업을 시작하세요.')).to_be_visible()
+        assert responses == [('/accounts/email/resend/', 302), ('/accounts/email/confirm/', 302), ('/accounts/logout/', 302)]
+        assert '_auth_user_id' not in client.session
+        browser.close()

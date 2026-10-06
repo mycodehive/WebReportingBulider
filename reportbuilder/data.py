@@ -227,6 +227,9 @@ def _sqlite_schema(config):
 
 
 def _csv_records(config, limit):
+    if config.get('_builtin_demo') == 'sales-v1' and not config.get('path'):
+        from .demo_data import sales_records
+        return sales_records(limit)
     path = _file(config, {".csv", ".tsv", ".txt"})
     delimiter = config.get("delimiter", "\t" if path.suffix.lower() == ".tsv" else ",")
     if not isinstance(delimiter, str) or len(delimiter) != 1:

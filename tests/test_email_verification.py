@@ -90,7 +90,7 @@ def test_get_does_not_consume_single_use_proof_and_no_automatic_login(client, me
     record.refresh_from_db()
     assert record.verified_at is None
     page = client.get('/accounts/email/confirm/')
-    assert page['Referrer-Policy'] == 'no-referrer'
+    assert page['Referrer-Policy'] == 'same-origin'
     assert token.encode() not in page.content
     assert '메일 인증 완료' in page.content.decode()
     assert client.post('/accounts/email/confirm/').status_code == 302

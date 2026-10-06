@@ -14,7 +14,7 @@ from .models import EmailVerification
 
 def page(request, state, **context):
     response = render(request, 'reportbuilder/email_verification.html', {'state': state, **context})
-    response['Referrer-Policy'] = 'no-referrer'
+    response['Referrer-Policy'] = 'same-origin'
     response['Cache-Control'] = 'no-store'
     return response
 
