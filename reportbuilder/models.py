@@ -294,3 +294,22 @@ class EmailVerificationLimit(models.Model):
     key = models.CharField(max_length=64, primary_key=True)
     window_started_at = models.DateTimeField(db_index=True)
     count = models.PositiveSmallIntegerField(default=0)
+
+
+class SEOConfiguration(models.Model):
+    """Site-wide metadata, managed only by staff; no executable markup."""
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    title = models.CharField('사이트 제목', max_length=120, blank=True)
+    description = models.CharField('사이트 설명', max_length=300, blank=True)
+    keywords = models.CharField('키워드', max_length=300, blank=True)
+    site_url = models.URLField('대표 서비스 주소', max_length=500, blank=True)
+    og_title = models.CharField('공유 제목', max_length=120, blank=True)
+    og_description = models.CharField('공유 설명', max_length=300, blank=True)
+    og_image = models.URLField('공유 이미지 URL', max_length=2000, blank=True)
+    google_verification = models.CharField('Google 인증 코드', max_length=255, blank=True)
+    naver_verification = models.CharField('네이버 인증 코드', max_length=255, blank=True)
+    allow_indexing = models.BooleanField('소개페이지 검색 허용', default=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [models.CheckConstraint(condition=models.Q(id=1), name='seo_configuration_singleton')]

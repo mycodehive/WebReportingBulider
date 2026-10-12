@@ -1,11 +1,12 @@
 from django.urls import path
 from . import views, google_oauth, sharing
 from . import analytics_views
-from . import branding, community, menu_views, settings_views, api_settings, mail_settings
+from . import branding, community, menu_views, settings_views, api_settings, mail_settings, seo
 
 urlpatterns = [
     path('settings/', settings_views.home, name='workspace_settings'),
     path('settings/sections/<int:section_id>/', settings_views.home, name='settings_section'),
+    path('settings/seo/', seo.settings, name='seo_settings'),
     path('settings/mail/', mail_settings.mail, name='mail_settings'),
     path('settings/company/', branding.settings, name='company_settings'),
     path('settings/api/internal/', api_settings.internal, name='internal_api_settings'),

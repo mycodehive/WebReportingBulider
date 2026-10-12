@@ -14,7 +14,7 @@ def visible_settings_sections(request):
 def visible_settings_children(section, request):
     staff = bool(request and request.user.is_staff)
     return [child for child in section.menus.all() if child.active and
-            (staff or (not child.staff_only and child.key != 'mail' and child.url != '/settings/mail/'))]
+            (staff or (not child.staff_only and child.key not in {'mail', 'seo'} and child.url not in {'/settings/mail/', '/settings/seo/'}))]
 
 
 def settings_page_allowed(request, child_key):

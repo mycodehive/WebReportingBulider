@@ -1,0 +1,6 @@
+.seo-index { display: grid; gap: 8px; margin: 24px 0; }
+.seo-index label, .seo-delete-confirm { display: flex; align-items: center; gap: 10px; }
+.seo-preview { border: 1px solid var(--border); border-radius: 12px; padding: 20px; overflow-wrap: anywhere; }
+.seo-preview h3 { color: var(--accent); margin: 8px 0; }
+.seo-preview p { color: var(--muted); margin: 0; }
+.seo-preview small { color: var(--muted); }
