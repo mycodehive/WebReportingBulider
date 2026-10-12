@@ -1,17 +1,26 @@
 """Staff-only SEO settings and escaped public introduction metadata."""
+import io
+import logging
+import uuid
+from pathlib import PurePosixPath
 from urllib.parse import urlsplit
 
 from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db import OperationalError, ProgrammingError
-from django.http import HttpResponseBadRequest, HttpResponseForbidden
+from django.core.files.base import ContentFile
+from django.db import OperationalError, ProgrammingError, transaction
+from django.http import HttpResponseBadRequest, HttpResponseForbidden, FileResponse, Http404
 from django.shortcuts import redirect, render
-from django.views.decorators.http import require_http_methods
+from django.urls import reverse
+from django.views.decorators.http import require_http_methods, require_safe
 
 from .models import SEOConfiguration
 from .settings_navigation import settings_navigation
 from .site_origin import inferred_service_url
+from .views import normalised_png
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_TITLE = 'WebReportingBuilder — 웹에서 만드는 업무 보고서'
 DEFAULT_DESCRIPTION = 'Excel·CSV·데이터베이스를 연결해 웹에서 보고서를 디자인하세요. 반복 출력과 합계, 미리보기, 게시·공유, 데이터 내보내기와 시스템 연동을 지원합니다.'
@@ -20,6 +29,12 @@ DEFAULT_DESCRIPTION = 'Excel·CSV·데이터베이스를 연결해 웹에서 보
 class SEOForm(forms.ModelForm):
     site_url = forms.URLField(label='대표 서비스 주소', required=False, max_length=500, assume_scheme='https')
     og_image = forms.URLField(label='공유 이미지 URL', required=False, max_length=2000, assume_scheme='https')
+
+    og_upload = forms.FileField(label='공유 이미지 업로드', required=False,
+                                widget=forms.FileInput(attrs={'accept': 'image/png,image/jpeg,image/gif,image/webp'}),
+                                help_text='PNG·JPG·GIF·WebP, 최대 5MB. 업로드 이미지를 URL보다 우선 사용합니다. 링크 방문자에게 공개됩니다. 권장 비율 1200×630.')
+    remove_image = forms.BooleanField(label='업로드 이미지 삭제', required=False,
+                                     help_text='새 파일을 선택하지 않고 체크 후 저장하세요. 이미지 URL이 있으면 URL 이미지로 돌아갑니다.')
 
     class Meta:
         model = SEOConfiguration
@@ -43,10 +58,22 @@ class SEOForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         for name, field in self.fields.items():
             field.help_text = self.Meta.help_texts.get(name, field.help_text)
-            if name != 'allow_indexing':
+            if name not in ('allow_indexing', 'remove_image'):
                 field.widget.attrs['class'] = 'input'
             if name in ('google_verification', 'naver_verification'):
                 field.widget.attrs['autocomplete'] = 'off'
+
+    def clean_og_upload(self):
+        upload = self.cleaned_data.get('og_upload')
+        if not upload:
+            return None
+        if upload.size > 5 * 1024 * 1024:
+            raise forms.ValidationError('이미지는 5MB 이하로 업로드하세요.')
+        try:
+            content = normalised_png(io.BytesIO(upload.read()))
+        except (ValueError, OSError):
+            raise forms.ValidationError('올바른 PNG·JPG·GIF·WebP 이미지를 선택하세요.') from None
+        return ContentFile(content, name=uuid.uuid4().hex + '.png')
 
     def clean(self):
         data = super().clean()
@@ -64,6 +91,11 @@ class SEOForm(forms.ModelForm):
                     self.add_error(name, '서비스 주소에는 경로·쿼리·프래그먼트를 넣을 수 없습니다.')
                 else:
                     data[name] = value.rstrip('/')
+        if data.get('og_upload') and data.get('remove_image'):
+            self.add_error('remove_image', '업로드와 삭제 중 하나만 선택하세요.')
+        has_upload = data.get('og_upload') or (self.instance.og_upload and not data.get('remove_image'))
+        if has_upload and not (data.get('site_url') or inferred_service_url()):
+            self.add_error('site_url', '공유 이미지의 공개 주소를 만들 대표 서비스 주소를 입력하세요.')
         for name in ('google_verification', 'naver_verification'):
             value = data.get(name, '')
             if any(char in value for char in '<>\r\n'):
@@ -80,20 +112,33 @@ def settings(request):
     if request.method == 'POST' and request.POST.get('action') == 'delete':
         if request.POST.get('confirm_delete') != 'yes':
             return HttpResponseBadRequest('삭제 확인이 필요합니다.')
-        SEOConfiguration.objects.filter(pk=1).delete()
+        with transaction.atomic():
+            SEOConfiguration.objects.filter(pk=1).delete()
+            if config and config.og_upload:
+                transaction.on_commit(lambda: cleanup_image(config.og_upload.storage, config.og_upload.name))
         messages.success(request, 'SEO 설정을 삭제했습니다. 기본 소개 정보로 돌아갑니다.')
         return redirect('seo_settings')
     if request.method == 'POST' and request.POST.get('action') != 'save':
         return HttpResponseBadRequest('올바르지 않은 작업입니다.')
-    form = SEOForm(request.POST if request.method == 'POST' else None, instance=config)
+    form = SEOForm(request.POST if request.method == 'POST' else None, request.FILES if request.method == 'POST' else None, instance=config)
     if request.method == 'POST' and form.is_valid():
+        previous = config.og_upload.name if config and config.og_upload else ''
         config = form.save(commit=False)
         config.pk = 1
-        config.save()
+        upload = form.cleaned_data.get('og_upload')
+        if upload:
+            config.og_upload = upload
+        elif form.cleaned_data.get('remove_image'):
+            config.og_upload = ''
+        with transaction.atomic():
+            config.save()
+            if previous and previous != config.og_upload.name:
+                transaction.on_commit(lambda: cleanup_image(config.og_upload.storage, previous))
         messages.success(request, 'SEO 설정을 저장했습니다. 소개페이지에 반영됩니다.')
         return redirect('seo_settings')
     response = render(request, 'reportbuilder/seo_settings.html', {
         'form': form, 'saved': config is not None,
+        'uploaded_image_url': image_path(config) if config and config.og_upload else '',
         'preview_title': DEFAULT_TITLE, 'preview_description': DEFAULT_DESCRIPTION,
         'preview_url': inferred_service_url() + '/intro' if inferred_service_url() else '대표 서비스 주소를 설정하세요.',
         **settings_navigation('basic', 'seo', request)})
@@ -115,9 +160,35 @@ def metadata(request):
         'title': title, 'description': description, 'keywords': config.keywords if config else '',
         'og_title': (config.og_title if config else '') or title,
         'og_description': (config.og_description if config else '') or description,
-        'og_image': config.og_image if config else '',
+        'og_image': (origin + image_path(config) if config and config.og_upload and origin
+                     else config.og_image if config else ''),
         'canonical': origin + '/intro' if public and origin else '',
         'robots': 'index, follow' if public and (not config or config.allow_indexing) else 'noindex, nofollow',
         'google_verification': config.google_verification if config and public else '',
         'naver_verification': config.naver_verification if config and public else '',
     }}
+
+
+def cleanup_image(storage, name):
+    try:
+        storage.delete(name)
+    except Exception:
+        logger.warning('SEO image cleanup failed', exc_info=True)
+
+
+def image_path(config):
+    return reverse('seo_image', args=[PurePosixPath(config.og_upload.name).name])
+
+
+@require_safe
+def image(request, image_name):
+    config = SEOConfiguration.objects.filter(pk=1).first()
+    if not config or not config.og_upload or PurePosixPath(config.og_upload.name).name != image_name:
+        raise Http404
+    try:
+        response = FileResponse(config.og_upload.open('rb'), content_type='image/png')
+    except (FileNotFoundError, OSError):
+        raise Http404 from None
+    response['Cache-Control'] = 'no-cache'
+    response['X-Content-Type-Options'] = 'nosniff'
+    return response

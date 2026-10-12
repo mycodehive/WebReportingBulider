@@ -6,6 +6,7 @@ from . import branding, community, menu_views, settings_views, api_settings, mai
 urlpatterns = [
     path('settings/', settings_views.home, name='workspace_settings'),
     path('settings/sections/<int:section_id>/', settings_views.home, name='settings_section'),
+    path('seo/image/<str:image_name>/', seo.image, name='seo_image'),
     path('settings/seo/', seo.settings, name='seo_settings'),
     path('settings/mail/', mail_settings.mail, name='mail_settings'),
     path('settings/company/', branding.settings, name='company_settings'),

@@ -6,15 +6,21 @@ from urllib.parse import urlparse
 import pytest
 from django.contrib.auth import get_user_model
 from django.contrib.staticfiles import finders
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import RequestFactory
+from PIL import Image
 
 from reportbuilder.models import SEOConfiguration
 
 
 @pytest.mark.django_db(transaction=True)
-def test_seo_themes_preview_and_crud(client, monkeypatch, settings):
+def test_seo_themes_preview_and_crud(client, monkeypatch, settings, tmp_path):
     playwright = pytest.importorskip('playwright.sync_api')
     monkeypatch.setenv('DJANGO_ALLOW_ASYNC_UNSAFE', 'true')
     settings.DEBUG = True
+    settings.MEDIA_ROOT = tmp_path
+    sample = tmp_path / "share.jpg"
+    Image.new("RGB", (120, 63), "#346b83").save(sample)
     settings.ALLOWED_HOSTS = ['testserver', 'wrb.writeaday.click']
     client.force_login(get_user_model().objects.create_user('seo-browser', is_staff=True))
 
@@ -25,11 +31,23 @@ def test_seo_themes_preview_and_crud(client, monkeypatch, settings):
             asset = finders.find(path.removeprefix('/static/'))
             route.fulfill(body=Path(asset).read_bytes(), content_type=mimetypes.guess_type(path)[0])
             return
-        response = (client.post(path, data=req.post_data_buffer, content_type=req.headers.get('content-type', 'application/x-www-form-urlencoded'))
-                    if req.method == 'POST' else client.get(path))
+        content_type = req.headers.get('content-type', 'application/x-www-form-urlencoded')
+        if req.method == 'POST' and content_type.startswith('multipart/form-data'):
+            # Playwright's intercepted post_data omits file bytes; restore the selected fixture.
+            parsed = RequestFactory().post(path, data=req.post_data_buffer, content_type=content_type)
+            data = parsed.POST.dict()
+            if parsed.FILES.get('og_upload') and parsed.FILES['og_upload'].name == sample.name:
+                data['og_upload'] = SimpleUploadedFile(sample.name, sample.read_bytes(), content_type='image/jpeg')
+            response = client.post(path, data=data)
+        elif req.method == 'POST':
+            response = client.post(path, data=req.post_data_buffer, content_type=content_type)
+        else:
+            response = client.get(path)
         if response.status_code == 302:
             response = client.get(response['Location'])
-        route.fulfill(status=response.status_code, body=response.content, content_type=response.get('Content-Type', 'text/html'))
+        body = b''.join(response.streaming_content) if response.streaming else response.content
+        route.fulfill(status=response.status_code, body=body, content_type=response.get('Content-Type', 'text/html'))
+        response.close()
 
     with playwright.sync_playwright() as api:
         browser = api.chromium.launch(executable_path=os.environ.get('PLAYWRIGHT_EXECUTABLE_PATH'))
@@ -54,9 +72,13 @@ def test_seo_themes_preview_and_crud(client, monkeypatch, settings):
         assert page.locator('#seo-preview-description script').count() == 0
         page.get_by_label('대표 서비스 주소', exact=True).fill('https://wrb.writeaday.click/')
         playwright.expect(page.locator('#seo-preview-url')).to_have_text('https://wrb.writeaday.click/intro')
+        page.get_by_label('공유 이미지 업로드', exact=True).set_input_files(str(sample))
         page.get_by_role('button', name='SEO 설정 등록').click()
         playwright.expect(page.get_by_role('button', name='변경사항 저장')).to_be_visible()
         assert SEOConfiguration.objects.get(pk=1).title == '브라우저 SEO 제목'
+        assert SEOConfiguration.objects.get(pk=1).og_upload
+        playwright.expect(page.get_by_alt_text('현재 링크 공유 이미지')).to_be_visible()
+        assert page.get_by_alt_text('현재 링크 공유 이미지').evaluate('(image) => image.complete && image.naturalWidth > 0')
         assert '<title>브라우저 SEO 제목</title>' in client.get('/intro').content.decode()
         page.get_by_label('소개페이지 검색 허용', exact=True).uncheck()
         with page.expect_response(lambda response: response.url.endswith('/settings/seo/') and response.request.method == 'POST') as saved:

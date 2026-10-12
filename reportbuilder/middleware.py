@@ -46,6 +46,7 @@ class EmailVerificationMiddleware:
 
         permitted = (request.path.startswith('/accounts/email/') or
                      request.path in {'/accounts/login/', '/accounts/logout/', '/accounts/signup/', '/intro', '/intro/'} or
+                     request.path.startswith('/seo/image/') or
                      request.path.startswith(settings.STATIC_URL))
         if (not permitted and request.user.is_authenticated and not request.user.is_staff
                 and needs_verification(request.user)):

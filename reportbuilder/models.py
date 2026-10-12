@@ -306,6 +306,7 @@ class SEOConfiguration(models.Model):
     og_title = models.CharField('공유 제목', max_length=120, blank=True)
     og_description = models.CharField('공유 설명', max_length=300, blank=True)
     og_image = models.URLField('공유 이미지 URL', max_length=2000, blank=True)
+    og_upload = models.FileField('공유 이미지 업로드', upload_to='seo/', blank=True)
     google_verification = models.CharField('Google 인증 코드', max_length=255, blank=True)
     naver_verification = models.CharField('네이버 인증 코드', max_length=255, blank=True)
     allow_indexing = models.BooleanField('소개페이지 검색 허용', default=True)

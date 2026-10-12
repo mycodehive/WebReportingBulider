@@ -7,9 +7,10 @@
 <div class="card community-card mail-card">
 <h2>SEO 설정 <span class="mail-admin-badge">운영자 전용</span></h2>
 <p class="muted">공개 소개페이지의 검색·공유 정보를 관리합니다. 저장 후 <a href="{% url 'intro' %}" target="_blank" rel="noopener">소개페이지 확인 ↗</a></p>
-<form method="post" action="{% url 'seo_settings' %}" class="community-form" id="seo-form">
+<form method="post" action="{% url 'seo_settings' %}" class="community-form" id="seo-form" enctype="multipart/form-data">
 {% csrf_token %}<input type="hidden" name="action" value="save">{{ form.non_field_errors }}
-<div class="mail-grid">{% for field in form %}{% if field.name != 'allow_indexing' %}<div class="mail-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}<small class="muted">{{ field.help_text }}</small>{{ field.errors }}</div>{% endif %}{% endfor %}</div>
+<div class="mail-grid">{% for field in form %}{% if field.name != 'allow_indexing' and field.name != 'remove_image' %}<div class="mail-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}<small class="muted">{{ field.help_text }}</small>{{ field.errors }}</div>{% endif %}{% endfor %}</div>
+{% if uploaded_image_url %}<div class="seo-image-current"><h3>현재 업로드 이미지</h3><img src="{{ uploaded_image_url }}" alt="현재 링크 공유 이미지"><label for="{{ form.remove_image.id_for_label }}">{{ form.remove_image }} {{ form.remove_image.label }}</label><small class="muted">{{ form.remove_image.help_text }}</small>{{ form.remove_image.errors }}</div>{% endif %}
 <div class="seo-index"><label for="{{ form.allow_indexing.id_for_label }}">{{ form.allow_indexing.label }} {{ form.allow_indexing }}</label><small class="muted">{{ form.allow_indexing.help_text }}</small>{{ form.allow_indexing.errors }}</div>
 <div class="community-actions"><button type="submit" class="button button-primary">{% if saved %}변경사항 저장{% else %}SEO 설정 등록{% endif %}</button></div>
 </form>
